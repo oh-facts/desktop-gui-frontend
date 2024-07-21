@@ -42,6 +42,11 @@ Arena_temp arena_temp_begin(Arena *arena)
 
 void arena_temp_end(Arena_temp *temp)
 {
+	for(u32 i = temp->pos; i < temp->arena->used; i ++)
+	{
+		u8 *base = (u8*)temp->arena;
+		base[i] = 0;
+	}
 	temp->arena->used = temp->pos;
 }
 

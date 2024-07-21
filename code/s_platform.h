@@ -9,12 +9,29 @@
 
 #include "stdio.h"
 #include "string.h"
-#include "base_core.h"
-
+#include "base/base_core.h"
+#include "base/base_math.h"
+#include "base/base_input.h"
+#include "base/base_string.h"
 #define STB_SPRINTF_IMPLEMENTATION
-#include "stb_sprintf.h"
-#include "base_string.h"
-#include "base_string.cpp"
+#include "stb/stb_sprintf.h"
+
+#include "base/base_input.cpp"
+#include "base/base_string.cpp"
+#include "base/base_math.cpp"
+
+#include "ui.h"
+#include "render.h"
+#include "draw.h"
+
+#include "saoirse.h"
+
+#define STBI_ONLY_PNG
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb/stb_truetype.h"
 
 typedef void *(*os_reserve_fn)(u64 size);
 typedef b32 (*os_commit_fn)(void *ptr, u64 size);
@@ -30,6 +47,9 @@ global os_release_fn os_release;
 global os_get_page_size_fn os_get_page_size;
 global os_get_app_dir_fn os_get_app_dir;
 
+global r_alloc_texture_fn r_alloc_texture;
+global r_submit_fn r_submit;
+
 struct S_Platform_api
 {
 	os_reserve_fn os_reserve;
@@ -38,6 +58,12 @@ struct S_Platform_api
 	os_release_fn os_release;
 	os_get_page_size_fn os_get_page_size;
 	os_get_app_dir_fn os_get_app_dir;
+};
+
+struct S_Render_api
+{
+	r_alloc_texture_fn r_alloc_texture;
+	r_submit_fn r_submit;
 };
 
 internal void s_global_platform_api_init(S_Platform_api *api)
@@ -50,8 +76,13 @@ internal void s_global_platform_api_init(S_Platform_api *api)
 	os_get_app_dir =  api->os_get_app_dir;
 }
 
-#include "base_core.cpp"
+internal void s_global_render_api_init(S_Render_api *api)
+{
+	r_alloc_texture = api->r_alloc_texture;
+	r_submit = api->r_submit;
+}
 
+#include "base/base_core.cpp"
 
 #include <stdlib.h>
 
@@ -80,6 +111,8 @@ struct TCXT
 {
 	Arena *arenas[2];
 	debug_cycle_counter counters[DEBUG_CYCLE_COUNTER_COUNT];
+	debug_cycle_counter counters_last[DEBUG_CYCLE_COUNTER_COUNT];
+	
 };
 
 global TCXT tcxt;
@@ -89,12 +122,14 @@ struct S_Platform
 	int argc;
 	char **argv;
 	Str8 app_dir;
-	S_Platform_api api;
+	S_Platform_api p_api;
+	S_Render_api r_api;
 	b32 initialized;
 	b32 reloaded;
 	u64 res;
 	u64 cmt;
 	void *memory;
+	v2i win_size;
 };
 
 // ty yeti
@@ -141,6 +176,10 @@ internal void process_debug_counters()
 	for(i32 i = 0; i < ARRAY_LEN(tcxt.counters); i ++)
 	{
 		debug_cycle_counter *counter = tcxt.counters + i;
+		debug_cycle_counter *counter_last = tcxt.counters_last + i;
+		
+		counter_last->hit_count = counter->hit_count;
+		counter_last->cycle_count = counter->cycle_count;
 		
 		//printf("%d: %lu\n", i, counter->cycle_count);
 		counter->hit_count = 0;
@@ -259,6 +298,102 @@ internal void write_file(const char *filepath, FILE_TYPE type, void *data, size_
 	
 	fclose(file);
 	
+}
+
+struct Bitmap
+{
+	void *data;
+	i32 w;
+	i32 h;
+	i32 n;
+};
+
+struct Glyph
+{
+	u8 *bmp;
+	i32 w;
+	i32 h;
+	v2i bearing;
+	i32 x0, y0, x1, y1;
+	i32 advance;
+};
+
+internal Bitmap bitmap(Str8 path)
+{
+	Bitmap out = {};
+	
+	stbi_set_flip_vertically_on_load(true);
+	
+	out.data = stbi_load((char*)path.c, &out.w, &out.h, &out.n, 0);
+	
+	if(!out.data)
+	{
+		printf("\nError loading%s :%s\n", path.c, stbi_failure_reason());
+		INVALID_CODE_PATH();
+	}
+	
+	return out;
+}
+
+internal Glyph *make_bmp_font(u8* path, char *codepoints, u32 num_cp, Arena* arena)
+{
+	
+	u8 *file_data = read_file(arena, (char*)path, FILE_TYPE_BINARY);
+	
+	stbtt_fontinfo font;
+  stbtt_InitFont(&font, (u8*)file_data, stbtt_GetFontOffsetForIndex((u8*)file_data,0));
+  
+	Glyph *out = push_array(arena, Glyph, num_cp);
+	
+	for(u32 i = 0; i < num_cp; i++)
+	{
+		i32 w,h,xoff,yoff;
+		f32 size = stbtt_ScaleForPixelHeight(&font, 64);
+		
+		u8* bmp = stbtt_GetCodepointBitmap(&font, 0, size, codepoints[i] ,&w,&h, &xoff, &yoff);
+		
+		stbtt_GetCodepointHMetrics(&font, codepoints[i], &out[i].advance, &out[i].bearing.x);
+		out[i].w = w;
+		out[i].h = h;
+		
+		i32 x0, y0, x1, y1;
+		stbtt_GetCodepointBox(&font, codepoints[i], &x0, &y0, &x1, &y1);
+		
+		out[i].bearing.y = y0;
+		
+		out[i].x0 = x0;
+		out[i].y0 = y0;
+		out[i].x1 = x1;
+		out[i].y1 = y1;
+		
+		out[i].bmp = push_array(arena,u8,w * h * 4);
+		
+		u8* src_row = bmp + w*(h-1);
+		u8* dest_row = out[i].bmp;
+		
+		for(u32 y = 0; y < h; y ++)
+		{
+			u32 *dest = (u32*)dest_row;
+			u8 *src = src_row;
+			for(u32 x = 0; x < w; x ++)
+			{
+				u8 alpha = *src++;
+				
+				*dest++ = ((alpha <<24) |
+									 (alpha <<16) |
+									 (alpha << 8) |
+									 (alpha ));
+			}
+			dest_row += 4 * w;
+			src_row -= w;
+		}
+		
+		stbtt_FreeBitmap(bmp, 0);
+		
+	}
+	
+	
+  return out;
 }
 
 #endif //S_PLATFORM_H

@@ -16,6 +16,7 @@ project.4coder
 temp/
 *.zip
 art.txt
+.clocignore
 
 // scripts
 *.bat
