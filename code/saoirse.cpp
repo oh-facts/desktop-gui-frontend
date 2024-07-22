@@ -17,12 +17,12 @@ union quat
   {
     f32 r,i,j,k;
   };
-  
+	
   struct
   {
     f32 x,y,z,w;
   };
-  
+	
   f32 e[4];
 };
 
@@ -51,7 +51,7 @@ struct R_Camera
   R_CAMERA_PROJ proj;
 };
 
-internal m4f quat_to_matrix(quat q) 
+internal m4f quat_to_matrix(quat q)
 {
   f32 xx = q.i * q.i;
   f32 yy = q.j * q.j;
@@ -62,7 +62,7 @@ internal m4f quat_to_matrix(quat q)
   f32 wx = q.r * q.i;
   f32 wy = q.r * q.j;
   f32 wz = q.r * q.k;
-  
+	
   return (m4f) {
     {
       {1 - 2 * (yy + zz), 2 * (xy - wz),     2 * (xz + wy),     0},
@@ -73,11 +73,11 @@ internal m4f quat_to_matrix(quat q)
   };
 }
 
-internal m4f m4f_make_perspective(f32 fov, f32 aspect, f32 near, f32 far) 
+internal m4f m4f_make_perspective(f32 fov, f32 aspect, f32 near, f32 far)
 {
   f32 tanHalfFov = tan(fov / 2.0f);
   f32 range = near - far;
-  
+	
   return (m4f) {
     {
       {1.0f / (aspect * tanHalfFov), 0, 0, 0},
@@ -92,7 +92,7 @@ internal m4f_ortho_proj r_cam_get_proj_inv(R_Camera *cam)
 {
   f32 z = cam->zoom;
   f32 za = z * cam->aspect;
-  
+	
   m4f_ortho_proj out = m4f_ortho(-za, za, -z, z, 0.001, 1000);
   return out;
 }
@@ -105,39 +105,39 @@ internal m4f r_cam_get_proj(R_Camera *cam)
     {
       f32 z = cam->zoom;
       f32 za = z * cam->aspect;
-      
+			
       m4f out = m4f_ortho(-za, za, -z, z, 0.001, 1000).fwd;
       return out;
-      
+			
     }break;
     case R_CAMERA_PROJ_PERS:
     {
       quat rot_x = {
-        .r = cosf(cam->input_rot.x / 2), 
+        .r = cosf(cam->input_rot.x / 2),
         .i = sinf(cam->input_rot.x / 2)
       };
       quat rot_y = {
         .r = cosf(cam->input_rot.y / 2),
         .j = sinf(cam->input_rot.y / 2),
       };
-      
-      
+			
+			
       quat rotation = rot_x * rot_y;
-      
-      
+			
+			
       m4f rotation_matrix = quat_to_matrix(rotation);
-      
+			
       m4f persp = m4f_make_perspective(90, 16.f/9, 0.001,1000);
-      
+			
       return persp * rotation_matrix;
-      
+			
     }break;
     default:
     {
       INVALID_CODE_PATH();
     }
   }
-  
+	
   INVALID_CODE_PATH();
   return m4f_identity();
 }
@@ -155,7 +155,7 @@ internal void r_cam_input(R_Camera *cam, Input *input)
     {
       cam->mv.x = 0;
       cam->mv.y = 0;
-      
+			
       if(input_is_key_held(input, 'W'))
       {
         cam->mv.y = 1;
@@ -172,14 +172,14 @@ internal void r_cam_input(R_Camera *cam, Input *input)
       {
         cam->mv.x = -1;
       }
-      
+			
     }break;
     case R_CAMERA_PROJ_PERS:
     {
       cam->mv.x = 0;
       cam->mv.y = 0;
       cam->mv.z = 0;
-      
+			
       if(input_is_key_held(input, 'W'))
       {
         cam->mv.z = 1;
@@ -204,51 +204,51 @@ internal void r_cam_input(R_Camera *cam, Input *input)
       {
         cam->mv.y = -1;
       }
-      
+			
       v2i mv = input_get_mouse_mv(input);
-      
-      
+			
+			
       cam->input_rot.x += mv.y * 0.001;
       cam->input_rot.y += mv.x * 0.001;
-      
+			
     }break;
     default:
     {
       INVALID_CODE_PATH();
     }
   }
-  
+	
 }
 
 internal void r_cam_update(R_Camera *cam, f32 delta)
 {
-  
+	
   switch(cam->proj)
   {
     case R_CAMERA_PROJ_ORTHO:
     {
       cam->pos += cam->mv * cam->speed * delta;
-      
+			
     }break;
     case R_CAMERA_PROJ_PERS:
     {
       quat rot_x = {
-        .r = cosf(cam->input_rot.x / 2), 
+        .r = cosf(cam->input_rot.x / 2),
         .i = sinf(cam->input_rot.x / 2)
       };
       quat rot_y = {
         .r = cosf(cam->input_rot.y / 2),
         .j = sinf(cam->input_rot.y / 2),
       };
-      
-      
+			
+			
       quat rotation = rot_x * rot_y;
-      
-      
+			
+			
       m4f rotation_matrix = quat_to_matrix(rotation);
-      
+			
       cam->pos += (rotation_matrix * (v4f){.xyz = cam->mv * cam->speed * delta}).xyz;
-      
+			
     }break;
     default:
     {
@@ -292,7 +292,7 @@ void update_and_render(S_Platform * pf, Input *input)
 			R_TEXTURE_WRAP_REPEAT
 		};
 		
-		char codepoints[] = 
+		char codepoints[] =
 		{
 			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y','z',
 			
@@ -301,7 +301,7 @@ void update_and_render(S_Platform * pf, Input *input)
 			
 			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 			
-			'.', '?', ',', '-', ':', '!', 
+			'.', '?', ',', '-', ':', '!',
 			
 			' ', '\n'
 		};
@@ -354,7 +354,7 @@ void update_and_render(S_Platform * pf, Input *input)
 	f32 aspect = (pf->win_size.x * 1.f)/ pf->win_size.y;
 	d_push_proj_view(&game->draw, m4f_ortho(-aspect, aspect, -1, 1, -1.001, 1000).fwd);
 	
-	default_text_params = 
+	default_text_params =
 	(D_Text_params){
 		(v4f){{1,1,1,1}},
 		0.00008,
@@ -380,9 +380,9 @@ void update_and_render(S_Platform * pf, Input *input)
 	ui_push_fixed_pos(cxt, v2f{{0.1,0.2}});
 	ui_rowf(cxt, "row")
 	{
-		if(ui_labelf(cxt, "ooga").active)
+		if(ui_labelf(cxt, "oo").active)
 		{
-			if(ui_labelf(cxt, "booga").active)
+			if(ui_labelf(cxt, "wee").active)
 			{
 				for(i32 i = 0; i < 4; i++)
 				{
@@ -390,17 +390,12 @@ void update_and_render(S_Platform * pf, Input *input)
 					{
 						for(i32 j = 0; j < 4; j++)
 						{
-							local_persist v4f color = D_COLOR_WHITE;
-							ui_push_text_color(cxt,color);
-							if(ui_labelf(cxt, "%d %d", i, j).hot)
+							
+							if(ui_labelf(cxt, "%d %d", i, j).active)
 							{
-								color = D_COLOR_BLUE;
+								
 							}
-							else
-							{
-								color = D_COLOR_WHITE;
-							}
-							ui_pop_text_color(cxt);
+							
 						}
 					}
 				}

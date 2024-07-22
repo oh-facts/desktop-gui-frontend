@@ -193,6 +193,7 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 	
 	// draw
 	stack_size = 0;
+	
 	stack[stack_size++] = root;
 	
 	while (stack_size > 0)
@@ -209,12 +210,22 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 			
 			if(child->flags & UI_Flags_has_text)
 			{
+				v4f color = {};
+				if(child->hot)
+				{
+					color = D_COLOR_BLUE;
+				}
+				else
+				{
+					color = child->color;
+				}
 				D_Text_params params = 
 				{
-					child->color,
+					color,
 					0.00008,
 					default_text_params.font
 				};
+				
 				
 				d_draw_text(draw, child->text, child->pos, &params);
 			}
