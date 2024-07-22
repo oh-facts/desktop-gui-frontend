@@ -362,15 +362,15 @@ void update_and_render(S_Platform * pf)
 	UI_Context cxt = {};
 	cxt.arena = trans;
 	
-	ui_push_text_color(&cxt, D_COLOR_BLACK);
+	ui_push_text_color(&cxt, D_COLOR_WHITE);
 	ui_push_bg_color(&cxt, D_COLOR_WHITE);
 	ui_push_pref_width(&cxt, 0.2);
 	ui_push_pref_height(&cxt, 0.1);
-	ui_push_text_color(&cxt, D_COLOR_WHITE);
-	ui_push_fixed_pos(&cxt, v2f{{0.3,0}});
+	ui_push_fixed_pos(&cxt, v2f{{-1,0}});
 	
 	UI_Widget *parent = ui_make_widget(&cxt);
 	ui_push_parent(&cxt, parent);
+	
 	ui_row(&cxt)
 	{
 		for(u32 i = 0; i < 4; i++)
@@ -384,12 +384,7 @@ void update_and_render(S_Platform * pf)
 				}
 			}
 		}
-	}
-	
-	ui_push_fixed_pos(&cxt, v2f{{0,0.3}});
-	ui_push_text_color(&cxt, D_COLOR_BLACK);
-	ui_row(&cxt)
-	{
+		ui_push_text_color(&cxt, D_COLOR_BLACK);
 		for(u32 i = 0; i < 4; i++)
 		{
 			ui_col(&cxt)
@@ -400,6 +395,12 @@ void update_and_render(S_Platform * pf)
 					ui_label(&cxt, text);
 				}
 			}
+		}
+		ui_col(&cxt)
+		{
+			ui_label(&cxt, str8_lit("he"));
+			ui_label(&cxt, str8_lit("he"));
+			ui_label(&cxt, str8_lit("he"));
 		}
 	}
 	

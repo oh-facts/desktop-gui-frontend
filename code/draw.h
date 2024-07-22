@@ -207,7 +207,6 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		
 		while (child)
 		{
-			
 			d_draw_text(draw, child->text, child->pos + child->fixed_position, &params);
 			
 			stack[stack_size++] = child;

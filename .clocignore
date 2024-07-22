@@ -1,4 +1,5 @@
-code/stb_sprintf.h
-code/stb_image.h
-code/stb_truetype.h
-code/opengl_platform.h
+code/stb/stb_sprintf.h
+code/stb/stb_image.h
+code/stb/stb_truetype.h
+code/opengl/opengl_khr_platform.h
+code/opengl/opengl_win32_platform.h
