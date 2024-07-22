@@ -259,10 +259,10 @@ internal void r_cam_update(R_Camera *cam, f32 delta)
 
 extern "C"
 {
-	YK_API void update_and_render(S_Platform *);
+	YK_API void update_and_render(S_Platform *, Input *);
 }
 
-void update_and_render(S_Platform * pf)
+void update_and_render(S_Platform * pf, Input *input)
 {
 	BEGIN_TIMED_BLOCK(UPDATE_AND_RENDER);
 	
@@ -331,6 +331,13 @@ void update_and_render(S_Platform * pf)
 		
 		arena_temp_end(&temp);
 		
+		game->cxt = ui_alloc_cxt();
+		ui_push_text_color(game->cxt, D_COLOR_WHITE);
+		ui_push_bg_color(game->cxt, D_COLOR_WHITE);
+		ui_push_pref_width(game->cxt, 0.2);
+		ui_push_pref_height(game->cxt, 0.1);
+		ui_push_fixed_pos(game->cxt, v2f{{0,0}});
+		
 	}
 	
 	Game *game = (Game*)pf->memory;
@@ -359,52 +366,55 @@ void update_and_render(S_Platform * pf)
 	//d_draw_text(&game->draw, str8_lit("I love you :D"), v2f{{0,0.4}}, &default_text_params);
 	//d_draw_rect(&game->draw, v2f{{0, 0}}, v2f{{0.6, 0.2}}, D_COLOR_THEME_1);
 	//d_draw_text(&game->draw, clocks, v2f{{0,0}}, &default_text_params);
-	UI_Context cxt = {};
-	cxt.arena = trans;
 	
-	ui_push_text_color(&cxt, D_COLOR_WHITE);
-	ui_push_bg_color(&cxt, D_COLOR_WHITE);
-	ui_push_pref_width(&cxt, 0.2);
-	ui_push_pref_height(&cxt, 0.1);
-	ui_push_fixed_pos(&cxt, v2f{{-1,0}});
+	f32 aspect_ratio = pf->win_size.x * 1.f / pf->win_size.y;
+	v2f screen_norm ;
+	screen_norm.x = input->mpos.x * 1.f / pf->win_size.y * 2.f - aspect_ratio;
+	screen_norm.y = 1 - input->mpos.y * 1.f / pf->win_size.y * 2.f;
 	
-	UI_Widget *parent = ui_make_widget(&cxt);
-	ui_push_parent(&cxt, parent);
+	UI_Context *cxt = game->cxt;
+	cxt->mpos = screen_norm;
+	cxt->mheld = input_is_mouse_held(input, MOUSE_BUTTON_LEFT);
+	cxt->mclick = input_is_click(input, MOUSE_BUTTON_LEFT);
 	
-	ui_row(&cxt)
+	ui_push_fixed_pos(cxt, v2f{{0.1,0.2}});
+	ui_rowf(cxt, "row")
 	{
-		for(u32 i = 0; i < 4; i++)
+		if(ui_labelf(cxt, "ooga").active)
 		{
-			ui_col(&cxt)
+			if(ui_labelf(cxt, "booga").active)
 			{
-				for(u32 j = 0; j < 4; j ++)
+				for(i32 i = 0; i < 4; i++)
 				{
-					Str8 text = push_str8f(trans, "%d %d", i, j);
-					ui_label(&cxt, text);
+					ui_colf(cxt, "col %d", i)
+					{
+						for(i32 j = 0; j < 4; j++)
+						{
+							local_persist v4f color = D_COLOR_WHITE;
+							ui_push_text_color(cxt,color);
+							if(ui_labelf(cxt, "%d %d", i, j).hot)
+							{
+								color = D_COLOR_BLUE;
+							}
+							else
+							{
+								color = D_COLOR_WHITE;
+							}
+							ui_pop_text_color(cxt);
+						}
+					}
 				}
+				
 			}
-		}
-		ui_push_text_color(&cxt, D_COLOR_BLACK);
-		for(u32 i = 0; i < 4; i++)
-		{
-			ui_col(&cxt)
-			{
-				for(u32 j = 0; j < 4; j ++)
-				{
-					Str8 text = push_str8f(trans, "%d %d", i, j);
-					ui_label(&cxt, text);
-				}
-			}
-		}
-		ui_col(&cxt)
-		{
-			ui_label(&cxt, str8_lit("he"));
-			ui_label(&cxt, str8_lit("he"));
-			ui_label(&cxt, str8_lit("he"));
 		}
 	}
+	ui_pop_fixed_pos(cxt);
 	
-	d_draw_ui(&game->draw, cxt.root);
+	
+	d_draw_ui(&game->draw, cxt->root);
+	//ui_end(cxt);
+	
+	
 	d_pop_proj_view(&game->draw);
 	
 	r_submit(&game->draw.list, pf->win_size);

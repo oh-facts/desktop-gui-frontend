@@ -374,7 +374,8 @@ int main(int argc, char **argv)
 		pf.win_size.x = win->w;
 		pf.win_size.y = win->h;
 		
-		update_and_render(&pf);
+		update_and_render(&pf, &input);
+		input_update(&input);
 		
 		SwapBuffers(win->dc);
 	}

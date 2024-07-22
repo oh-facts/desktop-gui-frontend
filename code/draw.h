@@ -5,6 +5,9 @@
 
 #define D_COLOR_BLACK (v4f){{0,0,0,1}}
 #define D_COLOR_WHITE (v4f){{1,1,1,1}}
+#define D_COLOR_RED (v4f){{1,0,0,1}}
+#define D_COLOR_GREEN (v4f){{0,1,0,1}}
+#define D_COLOR_BLUE (v4f){{0,0,1,1}}
 #define D_COLOR_THEME_1 (v4f){{0.66519, 0.37321, 0.12030,1}}
 #define D_COLOR_THEME_2 (v4f){{0.03, 0.02, 0.03,1}}
 #define D_COLOR_THEME_3 (v4f){{0.21044,0.02368,0.06198,1}}
@@ -198,16 +201,23 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		
 		UI_Widget *child = cur->first;
 		
-		D_Text_params params = 
-		{
-			cur->color,
-			0.00008,
-			default_text_params.font
-		};
 		
 		while (child)
 		{
-			d_draw_text(draw, child->text, child->pos + child->fixed_position, &params);
+			
+			child->pos += child->fixed_position;
+			
+			if(child->flags & UI_Flags_has_text)
+			{
+				D_Text_params params = 
+				{
+					child->color,
+					0.00008,
+					default_text_params.font
+				};
+				
+				d_draw_text(draw, child->text, child->pos, &params);
+			}
 			
 			stack[stack_size++] = child;
 			child = child->next;

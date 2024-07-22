@@ -49,6 +49,12 @@ struct UI_Widget
   UI_Widget *next;
   UI_Widget *prev;
   
+	UI_Widget *hash_next;
+	UI_Widget *hash_prev;
+	
+	u64 hash;
+	u64 last_frame_touched_index;
+	
 	u32 id;
 	
   UI_Flags flags;
@@ -106,15 +112,25 @@ struct UI_Axis2_node
 	Axis2 axis;
 };
 
+struct UI_Hash_slot
+{
+	UI_Widget *first;
+	UI_Widget *last;
+};
+
 struct UI_Context
 {
   Arena *arena;
-  v2f mpos;
-  b32 mdown;
-  b32 mdown_last_frame;
+  Arena *build_arena;
+	
+	v2f mpos;
+  b32 mheld;
   b32 mclick;
   
-  UI_Widget *root;
+	u64 hash_table_size;
+	UI_Hash_slot *hash_slots;
+	
+	UI_Widget *root;
   
   UI_Parent_node *parent_stack;
   UI_Color_node *text_color_stack;
@@ -126,6 +142,37 @@ struct UI_Context
 	
 	u32 num;
 };
+
+internal UI_Context *ui_alloc_cxt()
+{
+	Arena *arena = arena_create();
+	
+	UI_Context *cxt = push_struct(arena, UI_Context);
+	
+	cxt->arena = arena;
+	cxt->hash_table_size = 1024;
+	cxt->hash_slots = push_array(arena, UI_Hash_slot, cxt->hash_table_size);
+	
+	return cxt;
+}
+
+internal b32 ui_signal(v2f pos, v2f size, v2f mpos)
+{
+	b32 hot = 0;
+  v2f tl = {};
+  tl.x = pos.x;
+  tl.y = pos.y;
+  
+  v2f br = {};
+  br.x = pos.x + size.x;
+  br.y = pos.y + size.y;
+  
+  if(mpos.x > tl.x && mpos.x < br.x && mpos.y > tl.y && mpos.y < br.y)
+  {
+		hot = true;
+  }
+  return hot;
+}
 
 internal void ui_push_parent(UI_Context *cxt, UI_Widget *widget)
 {
@@ -286,11 +333,75 @@ internal void ui_pop_child_layout_axis(UI_Context *cxt)
 	cxt->child_layout_axis_stack = cxt->child_layout_axis_stack->next;
 }
 
-internal UI_Widget *ui_make_widget(UI_Context *cxt)
+// djb2
+unsigned long
+hash(Str8 str)
 {
-  UI_Widget *widget = push_struct(cxt->arena, UI_Widget);
-  widget->id = cxt->num++;
-  
+	unsigned long hash = 5381;
+	int c;
+	
+	for(u32 i = 0; i < str.len; i++)
+	{
+		c = str.c[i];
+		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+	}
+	
+	return hash;
+}
+
+internal UI_Widget *ui_widget_from_hash(UI_Context *cxt, u64 hash)
+{
+	UI_Widget *widget = 0;
+	
+	u64 slot = hash % cxt->hash_table_size;
+	
+	UI_Widget *cur = cxt->hash_slots[slot].first;
+	while(cur)
+	{
+		if(cur->hash == hash)
+		{
+			widget = cur;
+			break;
+		}
+		
+		cur = cur->hash_next;
+	}
+	
+	return widget;
+}
+
+internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
+{
+	u64 text_hash = hash(text);
+	
+	UI_Widget *widget = ui_widget_from_hash(cxt, text_hash);
+	
+	if(!widget)
+	{
+		widget = push_struct(cxt->arena, UI_Widget);
+		widget->hash = text_hash;
+		widget->text.c = push_array(cxt->arena, u8, text.len);
+		widget->text.len = text.len;
+		str8_cpy(&widget->text, &text);
+		u64 slot = text_hash % cxt->hash_table_size;
+		cxt->hash_slots[slot].first = widget;
+		
+		// temp. needs to move out of here. chain links are meant to be remade every frame
+		// before it overflowed because parent's old chains persisted and kept ykwim
+		
+	}
+	else
+	{
+		if(widget->hot && cxt->mclick)
+		{
+			widget->active = !widget->active;
+		}
+		widget->prev = 0;
+		widget->last = 0;
+		widget->next = 0;
+		
+	}
+	
 	if(cxt->parent_stack)
 	{
 		UI_Widget *parent = cxt->parent_stack->parent;
@@ -304,6 +415,9 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt)
 			parent->last = parent->first = widget;
 		}
 	}
+	
+	
+	widget->id = cxt->num++;
 	
 	widget->color = cxt->text_color_stack->color;
 	widget->bg_color = cxt->bg_color_stack->color;
@@ -329,11 +443,18 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt)
 	return widget;
 }
 
-internal void ui_begin_row(UI_Context *cxt)
+internal void ui_begin_rowf(UI_Context *cxt, char *fmt, ...)
 {
+	Arena_temp temp = scratch_begin(0,0);
+	va_list args;
+	va_start(args, fmt);
+	Str8 text = push_str8fv(temp.arena, fmt, args);
+	va_end(args);
+	
 	ui_set_next_child_layout_axis(cxt, Axis2_X);
-	UI_Widget *widget = ui_make_widget(cxt);
+	UI_Widget *widget = ui_make_widget(cxt, text);
 	ui_push_parent(cxt, widget);
+	arena_temp_end(&temp);
 }
 
 internal void ui_end_row(UI_Context *cxt)
@@ -341,11 +462,18 @@ internal void ui_end_row(UI_Context *cxt)
 	ui_pop_parent(cxt);
 }
 
-internal void ui_begin_col(UI_Context *cxt)
+internal void ui_begin_colf(UI_Context *cxt, char *fmt, ...)
 {
+	Arena_temp temp = scratch_begin(0,0);
+	va_list args;
+	va_start(args, fmt);
+	Str8 text = push_str8fv(temp.arena, fmt, args);
+	va_end(args);
+	
 	ui_set_next_child_layout_axis(cxt, Axis2_Y);
-	UI_Widget *widget = ui_make_widget(cxt);
+	UI_Widget *widget = ui_make_widget(cxt, text);
 	ui_push_parent(cxt, widget);
+	arena_temp_end(&temp);
 }
 
 internal void ui_end_col(UI_Context *cxt)
@@ -355,17 +483,34 @@ internal void ui_end_col(UI_Context *cxt)
 
 internal UI_Signal ui_label(UI_Context *cxt, Str8 text)
 {
-	UI_Widget *widget = ui_make_widget(cxt);
-	widget->text = text;
+	UI_Widget *widget = ui_make_widget(cxt, text);
 	widget->flags = UI_Flags_has_text;
 	
+	b32 hot = ui_signal(widget->pos, widget->size, cxt->mpos);
+	widget->hot = hot;
+	
 	UI_Signal out = {};
+	out.hot = hot;
+	out.active = widget->active;
 	
 	return out;
 }
 
-#define ui_row(v) UI_DeferLoop(ui_begin_row(v), ui_end_row(v))
-#define ui_col(v) UI_DeferLoop(ui_begin_col(v), ui_end_col(v))
+internal UI_Signal ui_labelf(UI_Context *cxt, char *fmt, ...)
+{
+	Arena_temp temp = scratch_begin(0,0);
+	va_list args;
+	va_start(args, fmt);
+	Str8 text = push_str8fv(temp.arena, fmt, args);
+	va_end(args);
+	
+	UI_Signal out = ui_label(cxt, text); 
+	arena_temp_end(&temp);
+	return out;
+}
+
+#define ui_rowf(v,...) UI_DeferLoop(ui_begin_rowf(v,__VA_ARGS__), ui_end_row(v))
+#define ui_colf(v,...) UI_DeferLoop(ui_begin_colf(v,__VA_ARGS__), ui_end_col(v))
 
 
 #endif //UI_H

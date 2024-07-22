@@ -13,6 +13,8 @@ struct Game
 	D_Bucket draw;
 	R_Font font[256];
 	R_Handle white_square;
+	
+	UI_Context *cxt;
 };
 
 #endif //SAOIRSE_H
