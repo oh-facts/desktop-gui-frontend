@@ -20,7 +20,7 @@
 #include "base/base_input.cpp"
 #include "base/base_string.cpp"
 #include "base/base_math.cpp"
-#include "base/base_tcxt.h"
+#include "base/base_tcxt.cpp"
 
 #include "ui.h"
 #include "render.h"

@@ -3,7 +3,6 @@
 #ifndef BASE_TCXT_H
 #define BASE_TCXT_H
 
-
 enum DEBUG_CYCLE_COUNTER
 {
 	DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER,
@@ -43,52 +42,10 @@ global TCXT tcxt;
 #define END_TIMED_BLOCK(ID)
 #endif
 
-internal void tcxt_init()
-{
-	for(u32 i = 0; i < ARRAY_LEN(tcxt.arenas); i ++)
-	{
-		tcxt.arenas[i] = arena_create(Megabytes(10), Megabytes(64));
-	}
-}
+internal void tcxt_init();
+internal void process_debug_counters();
 
-internal void process_debug_counters()
-{
-	for(i32 i = 0; i < ARRAY_LEN(tcxt.counters); i ++)
-	{
-		debug_cycle_counter *counter = tcxt.counters + i;
-		debug_cycle_counter *counter_last = tcxt.counters_last + i;
-		
-		counter_last->hit_count = counter->hit_count;
-		counter_last->cycle_count = counter->cycle_count;
-		
-		//printf("%d: %lu\n", i, counter->cycle_count);
-		counter->hit_count = 0;
-		counter->cycle_count = 0;
-	}
-}
-
-internal Arena *tcxt_get_scratch(Arena **conflicts, u64 count)
-{
-	Arena *out = 0;
-	for(u32 i = 0; i < ARRAY_LEN(tcxt.arenas); i ++)
-	{
-		b32 has_conflict = 0;
-		for(u32 j = 0; j < count; j ++)
-		{
-			if(tcxt.arenas[i] == conflicts[j])
-			{
-				has_conflict = 1;
-				break;
-			}
-		}
-		if(!has_conflict)
-		{
-			out = tcxt.arenas[i];
-		}
-	}
-	
-	return out;
-}
+internal Arena *tcxt_get_scratch(Arena **conflicts, u64 count);
 
 #define scratch_begin(conflicts, count) arena_temp_begin(tcxt_get_scratch(conflicts, count))
 #define scratch_end(scratch) arena_temp_end(scratch);
