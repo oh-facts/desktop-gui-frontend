@@ -1,6 +1,19 @@
 #include "s_platform.h"
 
-void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket *draw)
+internal void create_window(Window *win, Str8 title, f32 x, f32 y)
+{
+	win->cxt = ui_alloc_cxt();
+	win->title = title;
+	ui_push_text_color(win->cxt, D_COLOR_WHITE);
+	ui_push_bg_color(win->cxt, D_COLOR_WHITE);
+	ui_push_pref_width(win->cxt, 0);
+	ui_push_pref_height(win->cxt, 0);
+	ui_push_fixed_pos(win->cxt, v2f{{0,0}});
+	win->pos.x = x;
+	win->pos.y = y;
+}
+
+internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket *draw)
 {
 	f32 aspect_ratio = pf->win_size.x * 1.f / pf->win_size.y;
 	v2f screen_norm ;
@@ -11,317 +24,66 @@ void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket *draw)
 	cxt->mpos = screen_norm;
 	cxt->mheld = input_is_mouse_held(input, MOUSE_BUTTON_LEFT);
 	cxt->mclick = input_is_click(input, MOUSE_BUTTON_LEFT);
-	local_persist v2f screen_norm_last = {};
 	
-	ui_push_pref_width(cxt, 0.3);
-	ui_push_pref_height(cxt, 0.3);
-	ui_push_fixed_pos(cxt, win->pos);
-	ui_colf(cxt, "titlebar")
+	if(win->grabbed)
 	{
-		ui_rowf(cxt, "titlebar buttons")
-		{
-			if(ui_label(cxt, str8_lit("title")).hot)
-			{
-				if(input_is_mouse_held(input, MOUSE_BUTTON_LEFT))
+		win->pos += screen_norm - win->mpos_last;
+	}
+	
+	ui_push_pref_width(cxt, 0.2);
+	ui_push_pref_height(cxt, 0.2);
+	ui_push_fixed_pos(cxt, win->pos);
+	// TODO(mizu): set size of parent to be equal to be size of children, or when
+	// calculating row col offsets, check if prev sibling has a last child and if so, 
+	// account for that instead of just prev sibling
+	//ui_colf(cxt, "titlebar")
+	{
+		//ui_label(cxt, win->title);
+		//ui_labelf(cxt, "ooga");
+		//ui_labelf(cxt, "booga");
+		//ui_labelf(cxt, "sooga");
+		//ui_labelf(cxt, "rooga");
+		/*
+				ui_rowf(cxt, "titlebar buttons")
 				{
-					win->pos += screen_norm - screen_norm_last;
+					ui_push_pref_width(cxt, 0.8);
+					if(ui_label(cxt, win->title).hot)
+					{
+						win->grabbed = input_is_mouse_held(input, MOUSE_BUTTON_LEFT);
+					}
+					ui_pop_pref_width(cxt);
+					//ui_label(cxt,str8_lit("some"));
+					win->minimize = ui_label(cxt,str8_lit("hide")).active;
 				}
-			}
-			if(ui_label(cxt, str8_lit("m")).active)
-			{
-				win->minimize = 1;
-			}
-			else
-			{
-				win->minimize = 0;
-			}
-		}
+				*/
 		if(!win->minimize)
 		{
 			ui_rowf(cxt, "row")
 			{
-				if(ui_labelf(cxt, "oo").active)
+				ui_labelf(cxt, "dooga");
+				ui_labelf(cxt, "looga");
+				for(i32 i = 0; i < 4; i++)
 				{
-					if(ui_labelf(cxt, "wee").active)
+					ui_labelf(cxt, "%d", i);
+					ui_colf(cxt, "col %d", i)
 					{
-						for(i32 i = 0; i < 4; i++)
+						for(i32 j = 0; j < 4; j++)
 						{
-							ui_colf(cxt, "col %d", i)
-							{
-								for(i32 j = 0; j < 4; j++)
-								{
-									ui_labelf(cxt, "%d %d", i, j);
-								}
-							}
+							ui_labelf(cxt, "%d %d", i, j);
 						}
 					}
 				}
 			}
 		}
+		
 	}
+	
 	ui_pop_fixed_pos(cxt);
 	ui_pop_pref_width(cxt);
 	ui_pop_pref_height(cxt);
 	
 	d_draw_ui(draw, cxt->root);
-	screen_norm_last = screen_norm;
-}
-
-enum R_CAMERA_PROJ
-{
-	R_CAMERA_PROJ_UN,
-	R_CAMERA_PROJ_PERS,
-	R_CAMERA_PROJ_ORTHO,
-	R_CAMERA_PROJ_COUNT
-};
-
-#define R_WORLD_UP (v3f){{0,1,0}}
-#define R_WORLD_FRONT (v3f){{0,0,-1}}
-
-union quat
-{
-	struct
-	{
-		f32 r,i,j,k;
-	};
-	
-	struct
-	{
-		f32 x,y,z,w;
-	};
-	
-	f32 e[4];
-};
-
-internal quat operator*(quat x, quat y)
-{
-	return (quat){
-		.r = x.r * y.r - x.i * y.i - x.j * y.j - x.k * y.k,
-		.i = x.r * y.i + x.i * y.r + x.j * y.k - x.k * y.j,
-		.j = x.r * y.j - x.i * y.k + x.j * y.r + x.k * y.i,
-		.k = x.r * y.k + x.i * y.j - x.j * y.i + x.k * y.r
-	};
-}
-
-struct R_Camera
-{
-	v3f pos;
-	v3f target;
-	v3f up;
-	f32 pitch;
-	f32 yaw;
-	f32 zoom;
-	v3f mv;
-	v3f input_rot;
-	f32 speed;
-	f32 aspect;
-	R_CAMERA_PROJ proj;
-};
-
-internal m4f quat_to_matrix(quat q)
-{
-	f32 xx = q.i * q.i;
-	f32 yy = q.j * q.j;
-	f32 zz = q.k * q.k;
-	f32 xy = q.i * q.j;
-	f32 xz = q.i * q.k;
-	f32 yz = q.j * q.k;
-	f32 wx = q.r * q.i;
-	f32 wy = q.r * q.j;
-	f32 wz = q.r * q.k;
-	
-	return (m4f) {
-		{
-			{1 - 2 * (yy + zz), 2 * (xy - wz),     2 * (xz + wy),     0},
-			{2 * (xy + wz),     1 - 2 * (xx + zz), 2 * (yz - wx),     0},
-			{2 * (xz - wy),     2 * (yz + wx),     1 - 2 * (xx + yy), 0},
-			{0,                 0,                 0,                 1}
-		}
-	};
-}
-
-internal m4f m4f_make_perspective(f32 fov, f32 aspect, f32 near, f32 far)
-{
-	f32 tanHalfFov = tan(fov / 2.0f);
-	f32 range = near - far;
-	
-	return (m4f) {
-		{
-			{1.0f / (aspect * tanHalfFov), 0, 0, 0},
-			{0, 1.0f / tanHalfFov, 0, 0},
-			{0, 0, (near + far) / range, 2 * near * far / range},
-			{0, 0, -1, 0}
-		}
-	};
-}
-
-internal m4f_ortho_proj r_cam_get_proj_inv(R_Camera *cam)
-{
-	f32 z = cam->zoom;
-	f32 za = z * cam->aspect;
-	
-	m4f_ortho_proj out = m4f_ortho(-za, za, -z, z, 0.001, 1000);
-	return out;
-}
-
-internal m4f r_cam_get_proj(R_Camera *cam)
-{
-	switch(cam->proj)
-	{
-		case R_CAMERA_PROJ_ORTHO:
-		{
-			f32 z = cam->zoom;
-			f32 za = z * cam->aspect;
-			
-			m4f out = m4f_ortho(-za, za, -z, z, 0.001, 1000).fwd;
-			return out;
-			
-		}break;
-		case R_CAMERA_PROJ_PERS:
-		{
-			quat rot_x = {
-				.r = cosf(cam->input_rot.x / 2),
-				.i = sinf(cam->input_rot.x / 2)
-			};
-			quat rot_y = {
-				.r = cosf(cam->input_rot.y / 2),
-				.j = sinf(cam->input_rot.y / 2),
-			};
-			
-			
-			quat rotation = rot_x * rot_y;
-			
-			
-			m4f rotation_matrix = quat_to_matrix(rotation);
-			
-			m4f persp = m4f_make_perspective(90, 16.f/9, 0.001,1000);
-			
-			return persp * rotation_matrix;
-			
-		}break;
-		default:
-		{
-			INVALID_CODE_PATH();
-		}
-	}
-	
-	INVALID_CODE_PATH();
-	return m4f_identity();
-}
-
-internal m4f r_cam_get_view(R_Camera *cam)
-{
-	return m4f_look_at(cam->pos, cam->pos + cam->target, cam->up);
-}
-
-internal void r_cam_input(R_Camera *cam, Input *input)
-{
-	switch(cam->proj)
-	{
-		case R_CAMERA_PROJ_ORTHO:
-		{
-			cam->mv.x = 0;
-			cam->mv.y = 0;
-			
-			if(input_is_key_held(input, 'W'))
-			{
-				cam->mv.y = 1;
-			}
-			if(input_is_key_held(input, 'S'))
-			{
-				cam->mv.y = -1;
-			}
-			if(input_is_key_held(input, 'D'))
-			{
-				cam->mv.x = 1;
-			}
-			if(input_is_key_held(input, 'A'))
-			{
-				cam->mv.x = -1;
-			}
-			
-		}break;
-		case R_CAMERA_PROJ_PERS:
-		{
-			cam->mv.x = 0;
-			cam->mv.y = 0;
-			cam->mv.z = 0;
-			
-			if(input_is_key_held(input, 'W'))
-			{
-				cam->mv.z = 1;
-			}
-			if(input_is_key_held(input, 'S'))
-			{
-				cam->mv.z = -1;
-			}
-			if(input_is_key_held(input, 'D'))
-			{
-				cam->mv.x = 1;
-			}
-			if(input_is_key_held(input, 'A'))
-			{
-				cam->mv.x = -1;
-			}
-			if(input_is_key_held(input, 'Q'))
-			{
-				cam->mv.y = 1;
-			}
-			if(input_is_key_held(input, 'E'))
-			{
-				cam->mv.y = -1;
-			}
-			
-			v2i mv = input_get_mouse_mv(input);
-			
-			
-			cam->input_rot.x += mv.y * 0.001;
-			cam->input_rot.y += mv.x * 0.001;
-			
-		}break;
-		default:
-		{
-			INVALID_CODE_PATH();
-		}
-	}
-	
-}
-
-internal void r_cam_update(R_Camera *cam, f32 delta)
-{
-	
-	switch(cam->proj)
-	{
-		case R_CAMERA_PROJ_ORTHO:
-		{
-			cam->pos += cam->mv * cam->speed * delta;
-			
-		}break;
-		case R_CAMERA_PROJ_PERS:
-		{
-			quat rot_x = {
-				.r = cosf(cam->input_rot.x / 2),
-				.i = sinf(cam->input_rot.x / 2)
-			};
-			quat rot_y = {
-				.r = cosf(cam->input_rot.y / 2),
-				.j = sinf(cam->input_rot.y / 2),
-			};
-			
-			
-			quat rotation = rot_x * rot_y;
-			
-			
-			m4f rotation_matrix = quat_to_matrix(rotation);
-			
-			cam->pos += (rotation_matrix * (v4f){.xyz = cam->mv * cam->speed * delta}).xyz;
-			
-		}break;
-		default:
-		{
-			INVALID_CODE_PATH();
-		}
-	}
+	win->mpos_last = screen_norm;
 }
 
 extern "C"
@@ -398,15 +160,9 @@ void update_and_render(S_Platform * pf, Input *input)
 		
 		arena_temp_end(&temp);
 		
-		game->win.cxt = ui_alloc_cxt();
-		ui_push_text_color(game->win.cxt, D_COLOR_WHITE);
-		ui_push_bg_color(game->win.cxt, D_COLOR_WHITE);
-		ui_push_pref_width(game->win.cxt, 0);
-		ui_push_pref_height(game->win.cxt, 0);
-		ui_push_fixed_pos(game->win.cxt, v2f{{0,0}});
-		
-		game->win.pos.x = 0.3;
-		game->win.pos.y = 0;
+		create_window(&game->win[0], str8_lit("Entity list"), -0.8, 0.8);
+		//create_window(&game->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f);
+		//create_window(&game->win[2], str8_lit("Info Panel"),  .7f, -0.3f);
 	}
 	
 	Game *game = (Game*)pf->memory;
@@ -426,12 +182,14 @@ void update_and_render(S_Platform * pf, Input *input)
 	default_text_params =
 	(D_Text_params){
 		(v4f){{1,1,1,1}},
-		0.00008,
+		0.00007,
 		game->font
 	};
 	
 	
-	update_window(pf, input, &game->win, &game->draw);
+	update_window(pf, input, &game->win[0], &game->draw);
+	//update_window(pf, input, &game->win[1], &game->draw);
+	//update_window(pf, input, &game->win[2], &game->draw);
 	
 	
 	Str8 clocks = push_str8f(trans, "update and render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);

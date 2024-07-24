@@ -17,12 +17,12 @@ if "%clean%" == "1" rmdir /s /q "out"
 
 if not exist out mkdir out 
 
-if "%pf%" == "1" clang++ "%common_flags%" -luser32 -lkernel32 -lgdi32 -lopengl32 code/main.cpp -o out/pf.exe
+if "%pf%" == "1" clang++ "%common_flags%" -luser32 -lkernel32 -lgdi32 -lopengl32 code/main.cpp -o out/pf.exe && echo [platform]
 
 if %errorlevel% neq 0 echo platform compilation failed && exit /b
 
-if "%yk%" == "1" clang++ "%common_flags%" code/saoirse.cpp -shared -o out/yk.dll
+if "%yk%" == "1" clang++ "%common_flags%" code/saoirse.cpp -shared -o out/yk.dll && echo [game]
 
 if %errorlevel% neq 0 echo game compilation failed && exit /b
 
-if "%run%" == "1" start ./out/pf.exe
+if "%run%" == "1" start ./out/pf.exe && echo [run]

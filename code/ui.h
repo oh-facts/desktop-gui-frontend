@@ -48,7 +48,9 @@ struct UI_Widget
   UI_Widget *last;
   UI_Widget *next;
   UI_Widget *prev;
-  
+  UI_Widget *parent;
+	u64 num_child;
+	
 	UI_Widget *hash_next;
 	UI_Widget *hash_prev;
 	
@@ -75,42 +77,27 @@ struct UI_Widget
 	b32 active;
 };
 
-struct UI_Parent_node
-{
-	UI_Parent_node *next;
-	UI_Widget *parent;
+#define ui_make_style_struct(Name, Type) \
+struct UI_##Name##_node \
+{ \
+UI_##Name##_node *next; \
+Type v;\
 };
 
-struct UI_Color_node
-{
-  UI_Color_node *next;
-  v4f color;
-};
+ui_make_style_struct(Parent, UI_Widget *)
+ui_make_style_struct(Color, v4f)
+ui_make_style_struct(Pref_width, f32)
+ui_make_style_struct(Pref_height, f32)
+ui_make_style_struct(Fixed_pos, v2f)
+ui_make_style_struct(Axis2, Axis2)
 
-struct UI_Pref_width_node
-{
-  UI_Pref_width_node *next;
-  f32 w;
-};
-
-struct UI_Pref_height_node
-{
-  UI_Pref_height_node *next;
-  f32 h;
-};
-
-struct UI_Fixed_pos_node
-{
-	UI_Fixed_pos_node *next;
-	v2f pos;
-};
-
-struct UI_Axis2_node
-{
-	UI_Axis2_node *next;
-	b32 auto_pop;
-	Axis2 axis;
-};
+#define ui_make_style_struct_stack(Name, name) \
+struct \
+{\
+UI_##Name##_node *top;\
+UI_##Name##_node *free;\
+b32 auto_pop;\
+}name##_stack;
 
 struct UI_Hash_slot
 {
@@ -132,13 +119,13 @@ struct UI_Context
 	
 	UI_Widget *root;
   
-  UI_Parent_node *parent_stack;
-  UI_Color_node *text_color_stack;
-  UI_Color_node *bg_color_stack;
-  UI_Pref_width_node *pref_width_stack;
-	UI_Pref_height_node *pref_height_stack;
-	UI_Fixed_pos_node *fixed_pos_stack;
-	UI_Axis2_node *child_layout_axis_stack;
+	ui_make_style_struct_stack(Parent, parent);
+	ui_make_style_struct_stack(Color, text_color);
+	ui_make_style_struct_stack(Color, bg_color);
+	ui_make_style_struct_stack(Pref_width, pref_width);
+	ui_make_style_struct_stack(Pref_height, pref_height);
+	ui_make_style_struct_stack(Fixed_pos, fixed_pos);
+	ui_make_style_struct_stack(Axis2, child_layout_axis);
 	
 	u32 num;
 };
@@ -174,164 +161,125 @@ internal b32 ui_signal(v2f pos, v2f size, v2f mpos)
   return hot;
 }
 
+#define ui_make_alloc_node(Name, name) \
+internal UI_##Name##_node *ui_alloc_##name##_node(UI_Context *cxt) \
+{ \
+UI_##Name##_node *node = cxt->name##_stack.free;\
+if(node)\
+{\
+cxt->name##_stack.free = cxt->name##_stack.free->next;\
+memset(node, 0, sizeof(*node));\
+}\
+else\
+{\
+node = push_struct(cxt->arena, UI_##Name##_node);\
+}\
+return node;\
+}
+
+#define ui_make_free_node(Name, name) \
+internal void ui_free_##name##_node(UI_Context *cxt, UI_##Name##_node *node)\
+{\
+node->next = cxt->name##_stack.free;\
+cxt->name##_stack.free = node;\
+}
+
+ui_make_alloc_node(Parent, parent)
+ui_make_free_node(Parent, parent)
+
+ui_make_alloc_node(Color, text_color)
+ui_make_free_node(Color, text_color)
+
+ui_make_alloc_node(Color, bg_color)
+ui_make_free_node(Color, bg_color)
+
+ui_make_alloc_node(Pref_width, pref_width)
+ui_make_free_node(Pref_width, pref_width)
+
+ui_make_alloc_node(Pref_height, pref_height)
+ui_make_free_node(Pref_height, pref_height)
+
+ui_make_alloc_node(Fixed_pos, fixed_pos)
+ui_make_free_node(Fixed_pos, fixed_pos)
+
+ui_make_alloc_node(Axis2, child_layout_axis)
+ui_make_free_node(Axis2, child_layout_axis)
+
 internal void ui_push_parent(UI_Context *cxt, UI_Widget *widget)
 {
-	UI_Parent_node *node = push_struct(cxt->arena, UI_Parent_node);
-	node->parent = widget;
-	if(!cxt->parent_stack)
+	UI_Parent_node *node = ui_alloc_parent_node(cxt);
+	node->v = widget;
+	if(!cxt->parent_stack.top)
 	{
-		cxt->parent_stack = node;
+		cxt->parent_stack.top = node;
 		cxt->root = widget;
 	}
 	else
 	{
-		node->next = cxt->parent_stack;
-		cxt->parent_stack = node;
+		node->next = cxt->parent_stack.top;
+		cxt->parent_stack.top = node;
 	}
 }
 
 internal void ui_pop_parent(UI_Context *cxt)
 {
-	cxt->parent_stack = cxt->parent_stack->next;
-}
-
-internal void ui_push_text_color(UI_Context *cxt, v4f color)
-{
-	UI_Color_node *node = push_struct(cxt->arena, UI_Color_node);
-	node->color = color;
-	if(!cxt->text_color_stack)
-	{
-		cxt->text_color_stack = node;
-	}
-	else
-	{
-		node->next = cxt->text_color_stack;
-		cxt->text_color_stack = node;
-	}
-}
-
-internal void ui_pop_text_color(UI_Context *cxt)
-{
-	cxt->text_color_stack = cxt->text_color_stack->next;
-}
-
-internal void ui_push_bg_color(UI_Context *cxt, v4f color)
-{
-	UI_Color_node *node = push_struct(cxt->arena, UI_Color_node);
-	node->color = color;
-	if(!cxt->bg_color_stack)
-	{
-		cxt->bg_color_stack = node;
-	}
-	else
-	{
-		node->next = cxt->bg_color_stack;
-		cxt->bg_color_stack = node;
-	}
-}
-
-internal void ui_pop_bg_color(UI_Context *cxt)
-{
-	cxt->bg_color_stack = cxt->bg_color_stack->next;
-}
-
-internal void ui_push_pref_width(UI_Context *cxt, f32 w)
-{
-	UI_Pref_width_node *node = push_struct(cxt->arena, UI_Pref_width_node);
-	node->w = w;
-	if(!cxt->pref_width_stack)
-	{
-		cxt->pref_width_stack = node;
-	}
-	else
-	{
-		node->next = cxt->pref_width_stack;
-		cxt->pref_width_stack = node;
-	}
-}
-
-internal void ui_pop_pref_width(UI_Context *cxt)
-{
-	cxt->pref_width_stack = cxt->pref_width_stack->next;
-}
-
-internal void ui_push_pref_height(UI_Context *cxt, f32 h)
-{
-	UI_Pref_height_node *node = push_struct(cxt->arena, UI_Pref_height_node);
-	node->h = h;
-	if(!cxt->pref_height_stack)
-	{
-		cxt->pref_height_stack = node;
-	}
-	else
-	{
-		node->next = cxt->pref_height_stack;
-		cxt->pref_height_stack = node;
-	}
-}
-
-internal void ui_pop_pref_height(UI_Context *cxt)
-{
-	cxt->pref_height_stack = cxt->pref_height_stack->next;
-}
-
-internal void ui_push_fixed_pos(UI_Context *cxt, v2f pos)
-{
-	UI_Fixed_pos_node *node = push_struct(cxt->arena, UI_Fixed_pos_node);
-	node->pos = pos;
-	if(!cxt->fixed_pos_stack)
-	{
-		cxt->fixed_pos_stack = node;
-	}
-	else
-	{
-		node->next = cxt->fixed_pos_stack;
-		cxt->fixed_pos_stack = node;
-	}
-}
-
-internal void ui_pop_fixed_pos(UI_Context *cxt)
-{
-	cxt->fixed_pos_stack = cxt->fixed_pos_stack->next;
-}
-
-internal void ui_push_child_layout_axis(UI_Context *cxt, Axis2 axis)
-{
-	UI_Axis2_node *node = push_struct(cxt->arena, UI_Axis2_node);
+	UI_Parent_node *pop = cxt->parent_stack.top;
+	cxt->parent_stack.top = cxt->parent_stack.top->next;
 	
-	node->axis = axis;
-	if(!cxt->child_layout_axis_stack)
-	{
-		cxt->child_layout_axis_stack = node;
-	}
-	else
-	{
-		node->next = cxt->child_layout_axis_stack;
-		cxt->child_layout_axis_stack = node;
-	}
+	ui_free_parent_node(cxt, pop);
 }
 
-internal void ui_set_next_child_layout_axis(UI_Context *cxt, Axis2 axis)
-{
-	UI_Axis2_node *node = push_struct(cxt->arena, UI_Axis2_node);
-	
-	node->axis = axis;
-	if(!cxt->child_layout_axis_stack)
-	{
-		cxt->child_layout_axis_stack = node;
-	}
-	else
-	{
-		node->next = cxt->child_layout_axis_stack;
-		cxt->child_layout_axis_stack = node;
-	}
-	cxt->child_layout_axis_stack->auto_pop = 1;
+#define ui_make_push_style(Name, name, Type) \
+internal void ui_push_##name(UI_Context *cxt, Type val) { \
+UI_##Name##_node *node = ui_alloc_##name##_node(cxt);\
+node->v = val; \
+if (!cxt->name##_stack.top) { \
+cxt->name##_stack.top = node; \
+} else { \
+node->next = cxt->name##_stack.top; \
+cxt->name##_stack.top = node; \
+} \
 }
 
-internal void ui_pop_child_layout_axis(UI_Context *cxt)
-{
-	cxt->child_layout_axis_stack = cxt->child_layout_axis_stack->next;
+#define ui_make_set_next_style(Name, name, Type) \
+internal void ui_set_next_##name(UI_Context *cxt, Type val) { \
+UI_##Name##_node *node = ui_alloc_##name##_node(cxt); \
+node->v = val; \
+if (!cxt->name##_stack.top) { \
+cxt->name##_stack.top = node; \
+} else { \
+node->next = cxt->name##_stack.top; \
+cxt->name##_stack.top = node; \
+} \
+cxt->name##_stack.auto_pop = 1;\
 }
+
+#define ui_make_pop_style(Name, name) \
+internal void ui_pop_##name(UI_Context *cxt) { \
+UI_##Name##_node *pop = cxt->name##_stack.top;\
+cxt->name##_stack.top = cxt->name##_stack.top->next;\
+ui_free_##name##_node(cxt, pop);\
+}
+
+ui_make_push_style(Color, text_color, v4f)
+ui_make_pop_style(Color, text_color)
+
+ui_make_push_style(Color, bg_color, v4f)
+ui_make_pop_style(Color, bg_color)
+
+ui_make_push_style(Pref_width, pref_width, f32)
+ui_make_pop_style(Pref_width, pref_width)
+
+ui_make_push_style(Pref_height, pref_height, f32)
+ui_make_pop_style(Pref_height, pref_height)
+
+ui_make_push_style(Fixed_pos, fixed_pos, v2f)
+ui_make_pop_style(Fixed_pos, fixed_pos)
+
+ui_make_push_style(Axis2, child_layout_axis, Axis2)
+ui_make_pop_style(Axis2, child_layout_axis)
+
+ui_make_set_next_style(Axis2, child_layout_axis, Axis2)
 
 // djb2
 unsigned long
@@ -385,6 +333,7 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		str8_cpy(&widget->text, &text);
 		u64 slot = text_hash % cxt->hash_table_size;
 		cxt->hash_slots[slot].first = widget;
+		widget->id = cxt->num++;
 		
 		// temp. needs to move out of here. chain links are meant to be remade every frame
 		// before it overflowed because parent's old chains persisted and kept ykwim
@@ -399,12 +348,14 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		widget->prev = 0;
 		widget->last = 0;
 		widget->next = 0;
-		
 	}
 	
-	if(cxt->parent_stack)
+	if(cxt->parent_stack.top)
 	{
-		UI_Widget *parent = cxt->parent_stack->parent;
+		UI_Widget *parent = cxt->parent_stack.top->v;
+		parent->num_child++;
+		widget->parent = parent;
+		
 		if(parent->last)
 		{
 			widget->prev = parent->last;
@@ -417,29 +368,22 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 	}
 	
 	
-	widget->id = cxt->num++;
-	
-	widget->color = cxt->text_color_stack->color;
-	widget->bg_color = cxt->bg_color_stack->color;
-	widget->pref_size[Axis2_X].value = cxt->pref_width_stack->w;
-	widget->pref_size[Axis2_Y].value = cxt->pref_height_stack->h;
+	widget->color = cxt->text_color_stack.top->v;
+	widget->bg_color = cxt->bg_color_stack.top->v;
+	widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
+	widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
 	
 	//widget->computed_rel_position[Axis2_X] = cxt->fixed_pos_stack->pos.x;
 	//widget->computed_rel_position[Axis2_Y] = cxt->fixed_pos_stack->pos.y;
 	
-	widget->fixed_position = cxt->fixed_pos_stack->pos;
+	widget->fixed_position = cxt->fixed_pos_stack.top->v;
 	
-	if(cxt->child_layout_axis_stack)
+	if(cxt->child_layout_axis_stack.auto_pop)
 	{
-		if(cxt->child_layout_axis_stack->auto_pop)
-		{
-			widget->child_layout_axis = cxt->child_layout_axis_stack->axis;
-			cxt->child_layout_axis_stack->auto_pop = 0;
-			ui_pop_child_layout_axis(cxt);
-		}
-		
+		widget->child_layout_axis = cxt->child_layout_axis_stack.top->v;
+		cxt->child_layout_axis_stack.auto_pop = 0;
+		ui_pop_child_layout_axis(cxt);
 	}
-	
 	return widget;
 }
 

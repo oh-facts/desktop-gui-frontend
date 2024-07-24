@@ -80,6 +80,48 @@ struct W32_Window
 	b32 closed;
 };
 
+
+struct OS_Event
+{
+	v2i mpos;
+};
+
+struct OS_Event_node
+{
+	OS_Event_node *next;
+	OS_Event event;
+};
+
+struct OS_Event_list
+{
+	OS_Event_node *first;
+	OS_Event_node *last;
+	
+	u32 count;
+};
+
+Arena *arena;
+OS_Event_list event_list;
+
+internal OS_Event *os_push_event()
+{
+	OS_Event_node *node = push_struct(arena, OS_Event_node);
+	
+	OS_Event_list *list = &event_list;
+	list->count ++;
+	if(list->last)
+	{
+		list->last = list->last->next = node;
+	}
+	else
+	{
+		list->last = list->first = node;
+	}
+	
+	OS_Event *event = &node->event;
+	return event;
+}
+
 Input input;
 W32_Window *win;
 
@@ -122,7 +164,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
       input.mpos.x = LOWORD(lParam);
       input.mpos.y = HIWORD(lParam);
-    }break;
+			
+			OS_Event *event = os_push_event();
+			event->mpos.x = LOWORD(lParam);
+			event->mpos.y = HIWORD(lParam);
+			//printf("%d %d %d\n", i++, input.mpos.x, input.mpos.y);
+			
+		}break;
     case WM_KEYUP:
     case WM_KEYDOWN:
     {
@@ -330,7 +378,7 @@ int main(int argc, char **argv)
 	s_global_platform_api_init(&pf.p_api);
 	s_global_render_api_init(&pf.r_api);
 	
-	Arena *arena = arena_create();
+	arena = arena_create();
 	pf.memory = push_struct(arena, Game);
 	Str8 app_dir = os_get_app_dir(arena);
 	
@@ -360,11 +408,31 @@ int main(int argc, char **argv)
 	while(!win->closed)
 	{
 		MSG msg;
+		event_list.first = 0;
+		event_list.last = 0;
+		event_list.count = 0;
+		
 		while(PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
     {
       TranslateMessage(&msg);
       DispatchMessageA(&msg);
     }
+		//printf("%d) %d %d\n", i++, input.mpos.x, input.mpos.y);
+		if(input.mpos_old.x != input.mpos.x && input.mpos_old.y != input.mpos.y)
+		{
+#if 1
+			
+#else
+			
+			for(OS_Event_node *event = event_list.first; event != 0; event = event->next)
+			{
+				//printf("%d) %d %d\n", i++, event->event.mpos.x, event->event.mpos.y);
+			}
+			
+#endif
+		}
+		
+		//event_list.first = 0;
 		
 		f32 depth = 1;
 		v3f color = {{1,0,0}};
@@ -376,7 +444,6 @@ int main(int argc, char **argv)
 		
 		update_and_render(&pf, &input);
 		input_update(&input);
-		
 		SwapBuffers(win->dc);
 	}
 	

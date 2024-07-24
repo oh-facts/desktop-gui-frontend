@@ -160,20 +160,18 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		
 		while (child)
 		{
-			for (i32 i = 0; i < Axis2_COUNT; i++)
+			if (child->prev)
 			{
-				if (child->prev)
+				if (cur->child_layout_axis == Axis2_X)
 				{
-					if (cur->child_layout_axis == Axis2_X)
-					{
-						child->computed_rel_position[Axis2_X] = child->prev->computed_rel_position[Axis2_X] + child->prev->pref_size[Axis2_X].value;
-					}
-					else if (cur->child_layout_axis == Axis2_Y)
-					{
-						// down is -ve
-						child->computed_rel_position[Axis2_Y] = child->prev->computed_rel_position[Axis2_Y] - child->prev->pref_size[Axis2_Y].value;
-					}
+					child->computed_rel_position[Axis2_X] = child->prev->computed_rel_position[Axis2_X] + child->prev->pref_size[Axis2_X].value;
 				}
+				else if (cur->child_layout_axis == Axis2_Y)
+				{
+					// down is -ve
+					child->computed_rel_position[Axis2_Y] = child->prev->computed_rel_position[Axis2_Y] - child->prev->pref_size[Axis2_Y].value;
+				}
+				
 			}
 			
 			//child->pos.x = child->computed_rel_position[Axis2_X];
@@ -222,7 +220,7 @@ void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 				D_Text_params params = 
 				{
 					color,
-					0.00008,
+					default_text_params.scale,
 					default_text_params.font
 				};
 				

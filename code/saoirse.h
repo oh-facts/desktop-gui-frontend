@@ -6,18 +6,21 @@
 struct Window
 {
 	UI_Context *cxt;
+	Str8 title;
 	v2f pos;
 	v2f size;
 	b32 minimize;
+	b32 grabbed;
+	v2f mpos_last;
 };
 
 struct Game
 {
 	Arena *arena;
 	Arena *trans;
-	
 	i32 temp;
-	Window win;
+	
+	Window win[3];
 	D_Bucket draw;
 	R_Font font[256];
 	R_Handle white_square;
