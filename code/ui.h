@@ -90,6 +90,7 @@ ui_make_style_struct(Pref_width, f32)
 ui_make_style_struct(Pref_height, f32)
 ui_make_style_struct(Fixed_pos, v2f)
 ui_make_style_struct(Axis2, Axis2)
+ui_make_style_struct(SizeKind, UI_SizeKind)
 
 #define ui_make_style_struct_stack(Name, name) \
 struct \
@@ -126,6 +127,7 @@ struct UI_Context
 	ui_make_style_struct_stack(Pref_height, pref_height);
 	ui_make_style_struct_stack(Fixed_pos, fixed_pos);
 	ui_make_style_struct_stack(Axis2, child_layout_axis);
+	ui_make_style_struct_stack(SizeKind, size_kind);
 	
 	u32 num;
 };
@@ -205,29 +207,9 @@ ui_make_free_node(Fixed_pos, fixed_pos)
 ui_make_alloc_node(Axis2, child_layout_axis)
 ui_make_free_node(Axis2, child_layout_axis)
 
-internal void ui_push_parent(UI_Context *cxt, UI_Widget *widget)
-{
-	UI_Parent_node *node = ui_alloc_parent_node(cxt);
-	node->v = widget;
-	if(!cxt->parent_stack.top)
-	{
-		cxt->parent_stack.top = node;
-		cxt->root = widget;
-	}
-	else
-	{
-		node->next = cxt->parent_stack.top;
-		cxt->parent_stack.top = node;
-	}
-}
+ui_make_alloc_node(SizeKind, size_kind)
+ui_make_free_node(SizeKind, size_kind)
 
-internal void ui_pop_parent(UI_Context *cxt)
-{
-	UI_Parent_node *pop = cxt->parent_stack.top;
-	cxt->parent_stack.top = cxt->parent_stack.top->next;
-	
-	ui_free_parent_node(cxt, pop);
-}
 
 #define ui_make_push_style(Name, name, Type) \
 internal void ui_push_##name(UI_Context *cxt, Type val) { \
@@ -261,6 +243,9 @@ cxt->name##_stack.top = cxt->name##_stack.top->next;\
 ui_free_##name##_node(cxt, pop);\
 }
 
+ui_make_push_style(Parent, parent, UI_Widget*)
+ui_make_pop_style(Parent, parent)
+
 ui_make_push_style(Color, text_color, v4f)
 ui_make_pop_style(Color, text_color)
 
@@ -280,6 +265,10 @@ ui_make_push_style(Axis2, child_layout_axis, Axis2)
 ui_make_pop_style(Axis2, child_layout_axis)
 
 ui_make_set_next_style(Axis2, child_layout_axis, Axis2)
+
+ui_make_push_style(SizeKind, size_kind, UI_SizeKind)
+ui_make_pop_style(SizeKind, size_kind)
+
 
 // djb2
 unsigned long
@@ -333,6 +322,7 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		str8_cpy(&widget->text, &text);
 		u64 slot = text_hash % cxt->hash_table_size;
 		cxt->hash_slots[slot].first = widget;
+		
 		widget->id = cxt->num++;
 		
 		// temp. needs to move out of here. chain links are meant to be remade every frame
@@ -348,6 +338,12 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		widget->prev = 0;
 		widget->last = 0;
 		widget->next = 0;
+		
+		widget->computed_size[0] = 0;
+		widget->computed_size[1] = 0;
+		
+		widget->computed_rel_position[0] = 0;
+		widget->computed_rel_position[1] = 0;
 	}
 	
 	if(cxt->parent_stack.top)
@@ -367,11 +363,22 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		}
 	}
 	
-	
 	widget->color = cxt->text_color_stack.top->v;
 	widget->bg_color = cxt->bg_color_stack.top->v;
-	widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
-	widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
+	
+	if(cxt->size_kind_stack.top->v == UI_SizeKind_ChildrenSum)
+	{
+		widget->pref_size[Axis2_X].value = 0;
+		widget->pref_size[Axis2_Y].value = 0;
+	}
+	else if(cxt->size_kind_stack.top->v == UI_SizeKind_Pixels)
+	{
+		widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
+		widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
+	}
+	
+	widget->pref_size[Axis2_X].kind = cxt->size_kind_stack.top->v;
+	widget->pref_size[Axis2_Y].kind = cxt->size_kind_stack.top->v;
 	
 	//widget->computed_rel_position[Axis2_X] = cxt->fixed_pos_stack->pos.x;
 	//widget->computed_rel_position[Axis2_Y] = cxt->fixed_pos_stack->pos.y;
@@ -456,5 +463,175 @@ internal UI_Signal ui_labelf(UI_Context *cxt, char *fmt, ...)
 #define ui_rowf(v,...) UI_DeferLoop(ui_begin_rowf(v,__VA_ARGS__), ui_end_row(v))
 #define ui_colf(v,...) UI_DeferLoop(ui_begin_colf(v,__VA_ARGS__), ui_end_col(v))
 
+internal void ui_layout_fixed_size(UI_Widget *root, Axis2 axis)
+{
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_layout_fixed_size(child, axis);
+	}
+	
+	switch(root->pref_size[axis].kind)
+	{
+		default:
+		case UI_SizeKind_Null:
+		break;
+		case UI_SizeKind_Pixels:
+		{
+			root->computed_size[axis] += root->pref_size[axis].value;
+		}break;
+		case UI_SizeKind_TextContent:
+		{
+			// TODO(mizu): use text spacing stats to calculate text width
+		}
+		
+	}
+}
+
+internal void ui_layout_downward_dependent(UI_Widget *root, Axis2 axis)
+{
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_layout_downward_dependent(child, axis);
+	}
+	UI_Widget *parent = root->parent;
+	if(parent)
+	{
+		if(parent->pref_size[axis].kind == UI_SizeKind_ChildrenSum)
+		{
+			if(parent->child_layout_axis == axis)
+			{
+				parent->computed_size[axis] += root->computed_size[axis];
+			}
+			else
+			{
+				if(parent->computed_size[axis] < root->computed_size[axis])
+				{
+					parent->computed_size[axis] = root->computed_size[axis];
+				}
+			}
+		}
+	}
+}
+
+// pre order
+internal void ui_layout_pos(UI_Widget *root)
+{
+	if(root->parent)
+	{
+		root->computed_rel_position[0] += root->parent->computed_rel_position[0];
+		root->computed_rel_position[1] += root->parent->computed_rel_position[1];
+	}
+	
+	// TODO(mizu): Note how this just adds / subtracts instead of cumulatively adding 
+	// /subtracting. I get this weird distance bug where the distance is accounted for twice when I remove it. I will record the commit so its easier to understand / demonstrate. 
+	
+	if(root->prev)
+	{
+		if(root->parent->child_layout_axis == Axis2_X)
+		{
+			root->computed_rel_position[Axis2_X] = root->prev->computed_rel_position[Axis2_X] + root->prev->computed_size[Axis2_X];
+		}
+		else if(root->parent->child_layout_axis == Axis2_Y)
+		{
+			root->computed_rel_position[Axis2_Y] = root->prev->computed_rel_position[Axis2_Y] - root->prev->computed_size[Axis2_Y];
+		}
+	}
+	
+	
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_layout_pos(child);
+	}
+	
+}
+
+// post order dfs
+internal void ui_print_nodes_post_order(UI_Widget *root, i32 depth)
+{
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_print_nodes_post_order(child, depth + 1);
+	}
+	
+	for(i32 i = 0; i < depth; ++i) 
+	{
+		printf("-");
+	}
+	
+	printf("%s [%.2f , %.2f] [%.2f , %.2f] \n", root->text.c, root->computed_size[0], root->computed_size[1], root->computed_rel_position[0], root->computed_rel_position[1]);
+}
+
+internal void ui_print_nodes_pre_order(UI_Widget *root, i32 depth)
+{
+	
+	for(i32 i = 0; i < depth; ++i) 
+	{
+		printf("-");
+	}
+	
+	printf("%s [%.2f , %.2f] [%.2f , %.2f] \n", root->text.c, root->computed_size[0], root->computed_size[1], root->computed_rel_position[0], root->computed_rel_position[1]);
+	
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_print_nodes_pre_order(child, depth + 1);
+	}
+}
+
+internal void ui_layout(UI_Widget *root)
+{
+	for(Axis2 axis = (Axis2)0; axis < Axis2_COUNT; axis = (Axis2)(axis + 1))
+	{
+		ui_layout_fixed_size(root, axis);
+		ui_layout_downward_dependent(root, axis);
+	}
+	ui_layout_pos(root);
+	ui_print_nodes_pre_order(root, 0);
+	printf("\n");
+	
+}
+
+/*
+// calculate sizes
+	UI_Widget *stack[1024];
+	int stack_size = 0;
+	stack[stack_size++] = root;
+	
+	while (stack_size > 0)
+	{
+		UI_Widget *cur = stack[--stack_size];
+		
+		UI_Widget *child = cur->first;
+		
+		while (child)
+		{
+			if (child->prev)
+			{
+				if (cur->child_layout_axis == Axis2_X)
+				{
+					child->computed_rel_position[Axis2_X] = child->prev->computed_rel_position[Axis2_X] + child->prev->pref_size[Axis2_X].value;
+				}
+				else if (cur->child_layout_axis == Axis2_Y)
+				{
+					// down is -ve
+					child->computed_rel_position[Axis2_Y] = child->prev->computed_rel_position[Axis2_Y] - child->prev->pref_size[Axis2_Y].value;
+				}
+				
+			}
+			
+			//child->pos.x = child->computed_rel_position[Axis2_X];
+			//child->pos.y = child->computed_rel_position[Axis2_Y];
+			
+			child->pos.x = cur->computed_rel_position[Axis2_X] + child->computed_rel_position[Axis2_X];
+			child->pos.y = cur->computed_rel_position[Axis2_Y] + child->computed_rel_position[Axis2_Y];
+			
+			child->size.x = child->pref_size[Axis2_X].value;
+			child->size.y = child->pref_size[Axis2_Y].value;
+			
+			stack[stack_size++] = child;
+			child = child->next;
+		}
+	}
+	
+*/
 
 #endif //UI_H

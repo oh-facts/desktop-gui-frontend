@@ -143,95 +143,45 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 	}
 }
 
-local_persist D_Text_params default_text_params;
+global D_Text_params default_text_params;
 
-void d_draw_ui(D_Bucket *draw, UI_Widget *root)
+internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 {
-	// calculate sizes
-	UI_Widget *stack[1024];
-	int stack_size = 0;
-	stack[stack_size++] = root;
 	
-	while (stack_size > 0)
+	root->pos.x = root->computed_rel_position[0];
+	root->pos.y = root->computed_rel_position[1];
+	
+	if(root->parent)
 	{
-		UI_Widget *cur = stack[--stack_size];
-		
-		UI_Widget *child = cur->first;
-		
-		while (child)
-		{
-			if (child->prev)
-			{
-				if (cur->child_layout_axis == Axis2_X)
-				{
-					child->computed_rel_position[Axis2_X] = child->prev->computed_rel_position[Axis2_X] + child->prev->pref_size[Axis2_X].value;
-				}
-				else if (cur->child_layout_axis == Axis2_Y)
-				{
-					// down is -ve
-					child->computed_rel_position[Axis2_Y] = child->prev->computed_rel_position[Axis2_Y] - child->prev->pref_size[Axis2_Y].value;
-				}
-				
-			}
-			
-			//child->pos.x = child->computed_rel_position[Axis2_X];
-			//child->pos.y = child->computed_rel_position[Axis2_Y];
-			
-			child->pos.x = cur->computed_rel_position[Axis2_X] + child->computed_rel_position[Axis2_X];
-			child->pos.y = cur->computed_rel_position[Axis2_Y] + child->computed_rel_position[Axis2_Y];
-			
-			
-			child->size.x = child->pref_size[Axis2_X].value;
-			child->size.y = child->pref_size[Axis2_Y].value;
-			
-			stack[stack_size++] = child;
-			child = child->next;
-		}
+		//root->pos.x += root->parent->computed_rel_position[0];
+		//root->pos.y += root->parent->computed_rel_position[1];
 	}
 	
-	// draw
-	stack_size = 0;
-	
-	stack[stack_size++] = root;
-	
-	while (stack_size > 0)
+	if(root->flags & UI_Flags_has_text)
 	{
-		UI_Widget *cur = stack[--stack_size];
-		
-		UI_Widget *child = cur->first;
-		
-		
-		while (child)
+		v4f color = {};
+		if(root->hot)
 		{
-			
-			child->pos += child->fixed_position;
-			
-			if(child->flags & UI_Flags_has_text)
-			{
-				v4f color = {};
-				if(child->hot)
-				{
-					color = D_COLOR_BLUE;
-				}
-				else
-				{
-					color = child->color;
-				}
-				D_Text_params params = 
-				{
-					color,
-					default_text_params.scale,
-					default_text_params.font
-				};
-				
-				
-				d_draw_text(draw, child->text, child->pos, &params);
-			}
-			
-			stack[stack_size++] = child;
-			child = child->next;
+			color = D_COLOR_BLUE;
 		}
+		else
+		{
+			color = root->color;
+		}
+		D_Text_params params = 
+		{
+			color,
+			default_text_params.scale,
+			default_text_params.font
+		};
+		
+		d_draw_text(draw, root->text, root->pos, &params);
+		
+	}
+	
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		d_draw_ui(draw, child);
 	}
 }
-
 #endif //DRAW_H

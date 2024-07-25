@@ -1,4 +1,15 @@
 #include "s_platform.h"
+internal void ui_begin(UI_Context *cxt)
+{
+	UI_Widget *root = ui_make_widget(cxt, str8_lit("rootere"));
+	ui_push_parent(cxt, root);
+	cxt->root = root;
+}
+
+internal void ui_end(UI_Context *cxt)
+{
+	ui_pop_parent(cxt);
+}
 
 internal void create_window(Window *win, Str8 title, f32 x, f32 y)
 {
@@ -9,6 +20,8 @@ internal void create_window(Window *win, Str8 title, f32 x, f32 y)
 	ui_push_pref_width(win->cxt, 0);
 	ui_push_pref_height(win->cxt, 0);
 	ui_push_fixed_pos(win->cxt, v2f{{0,0}});
+	ui_push_size_kind(win->cxt, UI_SizeKind_Null);
+	
 	win->pos.x = x;
 	win->pos.y = y;
 }
@@ -30,59 +43,73 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 		win->pos += screen_norm - win->mpos_last;
 	}
 	
-	ui_push_pref_width(cxt, 0.2);
+	ui_begin(cxt);
+	ui_push_pref_width(cxt, 0.3);
 	ui_push_pref_height(cxt, 0.2);
 	ui_push_fixed_pos(cxt, win->pos);
-	// TODO(mizu): set size of parent to be equal to be size of children, or when
-	// calculating row col offsets, check if prev sibling has a last child and if so, 
-	// account for that instead of just prev sibling
-	//ui_colf(cxt, "titlebar")
+	
+	ui_push_size_kind(win->cxt, UI_SizeKind_ChildrenSum);
+	ui_colf(cxt, "window")
 	{
-		//ui_label(cxt, win->title);
-		//ui_labelf(cxt, "ooga");
-		//ui_labelf(cxt, "booga");
-		//ui_labelf(cxt, "sooga");
-		//ui_labelf(cxt, "rooga");
-		/*
-				ui_rowf(cxt, "titlebar buttons")
-				{
-					ui_push_pref_width(cxt, 0.8);
-					if(ui_label(cxt, win->title).hot)
-					{
-						win->grabbed = input_is_mouse_held(input, MOUSE_BUTTON_LEFT);
-					}
-					ui_pop_pref_width(cxt);
-					//ui_label(cxt,str8_lit("some"));
-					win->minimize = ui_label(cxt,str8_lit("hide")).active;
-				}
-				*/
-		if(!win->minimize)
+		ui_rowf(cxt, "titlebar")
 		{
-			ui_rowf(cxt, "row")
-			{
-				ui_labelf(cxt, "dooga");
-				ui_labelf(cxt, "looga");
-				for(i32 i = 0; i < 4; i++)
-				{
-					ui_labelf(cxt, "%d", i);
-					ui_colf(cxt, "col %d", i)
-					{
-						for(i32 j = 0; j < 4; j++)
-						{
-							ui_labelf(cxt, "%d %d", i, j);
-						}
-					}
-				}
-			}
+			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+			ui_label(cxt, win->title);
+			ui_labelf(cxt, "close");
+			ui_pop_size_kind(cxt);
 		}
-		
+		ui_rowf(cxt, "body")
+		{
+			ui_colf(cxt, "col1")
+			{
+				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+				ui_labelf(cxt, "content1");
+				ui_pop_size_kind(cxt);
+				
+				ui_rowf(cxt, "cw")
+				{
+					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_labelf(cxt, "cw1");
+					ui_labelf(cxt, "cw11");
+					ui_labelf(cxt, "cw111");
+					ui_pop_size_kind(cxt);
+				}
+				
+				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+				ui_labelf(cxt, "content111");
+				ui_pop_size_kind(cxt);
+			}
+			
+			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+			ui_labelf(cxt, "content2");
+			ui_pop_size_kind(cxt);
+			
+			ui_colf(cxt, "col3")
+			{
+				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+				ui_labelf(cxt, "content3");
+				ui_labelf(cxt, "content33");
+				ui_labelf(cxt, "content333");
+				ui_pop_size_kind(cxt);
+			}
+			
+			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+			ui_labelf(cxt, "content4");
+			ui_labelf(cxt, "content5");
+			ui_pop_size_kind(cxt);
+			
+			
+		}
 	}
+	ui_pop_size_kind(win->cxt);
 	
 	ui_pop_fixed_pos(cxt);
 	ui_pop_pref_width(cxt);
 	ui_pop_pref_height(cxt);
-	
+	ui_layout(cxt->root);
 	d_draw_ui(draw, cxt->root);
+	ui_end(cxt);
+	
 	win->mpos_last = screen_norm;
 }
 
