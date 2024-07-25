@@ -14,7 +14,7 @@ struct Window
 	v2f mpos_last;
 };
 
-struct Game
+struct State
 {
 	Arena *arena;
 	Arena *trans;

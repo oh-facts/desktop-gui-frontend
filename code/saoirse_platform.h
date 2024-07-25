@@ -1,7 +1,7 @@
 /* date = July 18th 2024 5:41 am */
 
-#ifndef S_PLATFORM_H
-#define S_PLATFORM_H
+#ifndef SAOIRSE_PLATFORM_H
+#define SAOIRSE_PLATFORM_H
 
 #define S_VERSION_MAJOR (0)
 #define S_VERSION_MINOR (1)
@@ -309,4 +309,4 @@ internal Glyph *make_bmp_font(u8* path, char *codepoints, u32 num_cp, Arena* are
   return out;
 }
 
-#endif //S_PLATFORM_H
+#endif //SAOIRSE_PLATFORM_H

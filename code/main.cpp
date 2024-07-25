@@ -1,5 +1,5 @@
 // core include
-#include "s_platform.h"
+#include "saoirse_platform.h"
 
 // backends
 #define WIN32_LEAN_AND_MEAN
@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 	s_global_render_api_init(&pf.r_api);
 	
 	arena = arena_create();
-	pf.memory = push_struct(arena, Game);
+	pf.memory = push_struct(arena, State);
 	Str8 app_dir = os_get_app_dir(arena);
 	
 	pf.app_dir = app_dir;

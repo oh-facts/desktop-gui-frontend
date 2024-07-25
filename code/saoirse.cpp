@@ -1,4 +1,4 @@
-#include "s_platform.h"
+#include "saoirse_platform.h"
 internal void ui_begin(UI_Context *cxt)
 {
 	UI_Widget *root = ui_make_widget(cxt, str8_lit("rootere"));
@@ -129,11 +129,11 @@ void update_and_render(S_Platform * pf, Input *input)
 		s_global_platform_api_init(&pf->p_api);
 		s_global_render_api_init(&pf->r_api);
 		Arena *arena = arena_create(Megabytes(1), Gigabytes(1));
-		Game *game = push_struct(arena, Game);
-		pf->memory = (void*)game;
-		game->arena = arena;
-		game->trans = arena_create();
-		game->temp = -1000;
+		State *state = push_struct(arena, State);
+		pf->memory = (void*)state;
+		state->arena = arena;
+		state->trans = arena_create();
+		state->temp = -1000;
 		tcxt_init();
 		
 		R_Texture_params font_params = {
@@ -162,9 +162,9 @@ void update_and_render(S_Platform * pf, Input *input)
 			' ', '\n'
 		};
 		
-		Arena_temp temp = arena_temp_begin(game->trans);
-		Str8 font_path = push_str8f(game->trans,"%s../data/delius.ttf",pf->app_dir.c);
-		Glyph *temp_font = make_bmp_font(font_path.c, codepoints, ARRAY_LEN(codepoints), game->trans);
+		Arena_temp temp = arena_temp_begin(state->trans);
+		Str8 font_path = push_str8f(state->trans,"%s../data/delius.ttf",pf->app_dir.c);
+		Glyph *temp_font = make_bmp_font(font_path.c, codepoints, ARRAY_LEN(codepoints), state->trans);
 		
 		for(u32 i = 0; i < ARRAY_LEN(codepoints); i ++)
 		{
@@ -172,65 +172,63 @@ void update_and_render(S_Platform * pf, Input *input)
 			
 			if(c != '\n' && c != ' ')
 			{
-				game->font[c].tex = r_alloc_texture(temp_font[i].bmp, temp_font[i].w, temp_font[i].h, 1, &font_params);
+				state->font[c].tex = r_alloc_texture(temp_font[i].bmp, temp_font[i].w, temp_font[i].h, 1, &font_params);
 			}
-			game->font[c].bearing = temp_font[i].bearing;
-			game->font[c].advance = temp_font[i].advance;
-			game->font[c].x0 = temp_font[i].x0;
-			game->font[c].x1 = temp_font[i].x1;
-			game->font[c].y0 = temp_font[i].y0;
-			game->font[c].y1 = temp_font[i].y1;
+			state->font[c].bearing = temp_font[i].bearing;
+			state->font[c].advance = temp_font[i].advance;
+			state->font[c].x0 = temp_font[i].x0;
+			state->font[c].x1 = temp_font[i].x1;
+			state->font[c].y0 = temp_font[i].y0;
+			state->font[c].y1 = temp_font[i].y1;
 		}
 		u32 *white_square = push_struct(arena, u32);
 		*white_square = 0xFFFFFFFF;
-		game->white_square = r_alloc_texture(white_square, 1, 1, 4, &tiled_params);
+		state->white_square = r_alloc_texture(white_square, 1, 1, 4, &tiled_params);
 		
 		arena_temp_end(&temp);
 		
-		create_window(&game->win[0], str8_lit("Entity list"), -0.8, 0.8);
-		//create_window(&game->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f);
-		//create_window(&game->win[2], str8_lit("Info Panel"),  .7f, -0.3f);
+		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8);
+		//create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f);
+		//create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f);
 	}
 	
-	Game *game = (Game*)pf->memory;
+	State *state = (State*)pf->memory;
 	
-	Arena *arena = game->arena;
-	Arena *trans = game->trans;
+	Arena *arena = state->arena;
+	Arena *trans = state->trans;
 	
 	Arena_temp temp = arena_temp_begin(trans);
 	
-	game->draw = {};
-	game->draw.arena = trans;
-	game->draw.white_square = game->white_square;
-	
-	f32 aspect = (pf->win_size.x * 1.f)/ pf->win_size.y;
-	d_push_proj_view(&game->draw, m4f_ortho(-aspect, aspect, -1, 1, -1.001, 1000).fwd);
-	
-	default_text_params =
+	state->draw = {};
+	state->draw.arena = trans;
+	state->draw.white_square = state->white_square;
+	state->draw.default_text_params =
 	(D_Text_params){
 		(v4f){{1,1,1,1}},
 		0.00007,
-		game->font
+		state->font
 	};
 	
+	f32 aspect = (pf->win_size.x * 1.f)/ pf->win_size.y;
+	d_push_proj_view(&state->draw, m4f_ortho(-aspect, aspect, -1, 1, -1.001, 1000).fwd);
 	
-	update_window(pf, input, &game->win[0], &game->draw);
-	//update_window(pf, input, &game->win[1], &game->draw);
-	//update_window(pf, input, &game->win[2], &game->draw);
+	update_window(pf, input, &state->win[0], &state->draw);
+	//update_window(pf, input, &state->win[1], &state->draw);
+	//update_window(pf, input, &state->win[2], &state->draw);
 	
 	
 	Str8 clocks = push_str8f(trans, "update and render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);
 	
-	//d_draw_text(&game->draw, str8_lit("I love you :D"), v2f{{0,0.4}}, &default_text_params);
-	//d_draw_rect(&game->draw, v2f{{0, 0}}, v2f{{0.6, 0.2}}, D_COLOR_THEME_1);
-	//d_draw_text(&game->draw, clocks, v2f{{0,0}}, &default_text_params);
+	//d_draw_text(&state->draw, str8_lit("I love you :D"), v2f{{0,0.4}}, &default_text_params);
+	//d_draw_rect(&state->draw, v2f{{0, 0}}, v2f{{0.6, 0.2}}, D_COLOR_THEME_1);
+	//d_draw_text(&state->draw, clocks, v2f{{0,0}}, &default_text_params);
 	
 	//ui_end(cxt);
 	
 	
-	d_pop_proj_view(&game->draw);
+	d_pop_proj_view(&state->draw);
 	
-	r_submit(&game->draw.list, pf->win_size);
+	r_submit(&state->draw.list, pf->win_size);
 	
 	arena_temp_end(&temp);
 	

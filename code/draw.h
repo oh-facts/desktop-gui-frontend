@@ -41,6 +41,7 @@ struct D_Bucket
 	R_Handle white_square;
 	D_Proj_view_node *proj_view_top;
 	
+	D_Text_params default_text_params;
 };
 
 internal void d_push_proj_view(D_Bucket *bucket, m4f proj_view)
@@ -143,8 +144,6 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 	}
 }
 
-global D_Text_params default_text_params;
-
 internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 {
 	
@@ -168,11 +167,12 @@ internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		{
 			color = root->color;
 		}
+		
 		D_Text_params params = 
 		{
 			color,
-			default_text_params.scale,
-			default_text_params.font
+			draw->default_text_params.scale,
+			draw->default_text_params.font
 		};
 		
 		d_draw_text(draw, root->text, root->pos, &params);

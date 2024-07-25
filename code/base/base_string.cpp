@@ -49,3 +49,17 @@ Str8 push_str8fv(Arena *arena, char *fmt, va_list args)
   
   return out;
 }
+
+Str8 str8_join(Arena *arena, Str8 a, Str8 b)
+{
+	Str8 out = {};
+	out.c = push_array(arena, u8, a.len + b.len);
+	
+	mem_cpy(out.c, a.c, a.len);
+	
+	mem_cpy((u8*)out.c + a.len, b.c, b.len);
+	//printf("%s %lu\r\n", b.c, b.len);
+	
+	out.len = a.len + b.len;
+	return out;
+}
