@@ -40,8 +40,8 @@ struct R_Texture_params
 
 struct R_Rect
 {
-	v2f pos;
-	v2f scale;
+	v2f tl;
+	v2f br;
 	
 	v4f color;
 	R_Handle tex;

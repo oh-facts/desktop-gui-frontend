@@ -22,7 +22,7 @@ if "%release%" == "1" echo [release] && set build_type=%release_build%
 
 if not exist out mkdir out 
 
-if "%platform%" == "1" echo [platform] && clang++ "%common_flags%" "%build_type%" -luser32 -lkernel32 -lgdi32 -lopengl32 code/main.cpp -o out/pf.exe
+if "%platform%" == "1" echo [platform] && clang++ "%common_flags%" "%build_type%" -luser32 -lkernel32 -lgdi32 -lopengl32 code/main.cpp -o out/platform.exe
 
 if %errorlevel% neq 0 echo platform compilation failed && exit /b
 

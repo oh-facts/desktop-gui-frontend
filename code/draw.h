@@ -87,9 +87,12 @@ internal void d_draw_rect(D_Bucket *bucket, v2f pos, v2f scale, v4f color)
 	R_Pass *pass = d_pass_from_bucket(bucket, R_PASS_KIND_UI);
 	R_Rect *rect = r_push_batch(bucket->arena, &pass->rect_pass.rects, R_Rect);
 	
-	rect->pos = pos;
+	rect->tl.x = pos.x;
+	rect->tl.y = pos.y;
 	
-	rect->scale = scale;
+	rect->br.x = rect->tl.x + scale.x;
+	rect->br.y = rect->tl.y - scale.y;
+	
 	rect->tex = bucket->white_square;
 	rect->color = color;
 	pass->rect_pass.proj_view = bucket->proj_view_top->v;
@@ -131,10 +134,11 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 		R_Pass *pass = d_pass_from_bucket(bucket, R_PASS_KIND_UI);
 		R_Rect *rect = r_push_batch(bucket->arena, &pass->rect_pass.rects, R_Rect);
 		
-		rect->pos.x = xpos;
-		rect->pos.y = ypos;
-		rect->scale.x = w;
-		rect->scale.y = h;
+		rect->tl.x = xpos;
+		rect->tl.y = ypos - (0.0504f - h);
+		//printf("%f\n", h);
+		rect->br.x = rect->tl.x + w;
+		rect->br.y = rect->tl.y - h;
 		rect->tex = ch->tex;
 		rect->color = p->color;
 		pass->rect_pass.proj_view = bucket->proj_view_top->v;
@@ -150,8 +154,16 @@ internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 	root->pos.x = root->computed_rel_position[0];
 	root->pos.y = root->computed_rel_position[1];
 	
-	if(root->parent)
+	if(!root->parent)
 	{
+		v2f size = {};
+		size.x = root->first->computed_size[0];
+		size.y = root->first->computed_size[1];
+		
+		v2f pos = {};
+		pos.x = root->first->pos.x;
+		pos.y = root->first->pos.y;
+		d_draw_rect(draw, pos, size, D_COLOR_BLUE);
 		//root->pos.x += root->parent->computed_rel_position[0];
 		//root->pos.y += root->parent->computed_rel_position[1];
 	}
@@ -176,7 +188,6 @@ internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		};
 		
 		d_draw_text(draw, root->text, root->pos, &params);
-		
 	}
 	
 	for(UI_Widget *child = root->first; child; child = child->next)

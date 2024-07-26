@@ -60,8 +60,8 @@ struct Vertex
 
 struct TextObject
 {
-	vec2 pos;
-	vec2 scale;
+	vec2 tl;
+	vec2 br;
 vec4 color;
 uvec2 sprite_id;
 uvec2 padd;
@@ -82,10 +82,10 @@ void main()
 	TextObject obj = objects[gl_InstanceID];
 
 	Vertex vertices[] = {
-		{{ obj.pos.x + obj.scale.x,  obj.pos.y}, {1,0}},
-		{{ obj.pos.x + obj.scale.x,  obj.pos.y + obj.scale.y}, {1,1}},
-		{{ obj.pos.x, obj.pos.y + obj.scale.y}, {0,1}},
-		{{ obj.pos.x,  obj.pos.y}, {0,0}},
+		{{ obj.tl.x,  obj.tl.y}, {0,1}},
+		{{ obj.br.x,  obj.tl.y}, {1,1}},
+		{{ obj.br.x, obj.br.y}, {1,0}},
+		{{ obj.tl.x,  obj.br.y}, {0,0}},
 };
 	Vertex vertex = vertices[gl_VertexID];
 	
