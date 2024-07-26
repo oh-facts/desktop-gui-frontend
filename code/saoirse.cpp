@@ -55,50 +55,52 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 		{
 			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
 			ui_label(cxt, win->title);
-			ui_labelf(cxt, "close");
+			win->minimize = ui_labelf(cxt, "hide").active;
 			ui_pop_size_kind(cxt);
 		}
-		ui_rowf(cxt, "body")
+		if(!win->minimize)
 		{
-			ui_colf(cxt, "col1")
+			ui_rowf(cxt, "body")
 			{
-				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-				ui_labelf(cxt, "content1");
-				ui_pop_size_kind(cxt);
-				
-				ui_rowf(cxt, "cw")
+				ui_colf(cxt, "col1")
 				{
 					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-					ui_labelf(cxt, "cw1");
-					ui_labelf(cxt, "cw11");
-					ui_labelf(cxt, "cw111");
+					ui_labelf(cxt, "content1");
+					ui_pop_size_kind(cxt);
+					
+					ui_rowf(cxt, "cw")
+					{
+						ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+						ui_labelf(cxt, "cw1");
+						ui_labelf(cxt, "cw11");
+						ui_labelf(cxt, "cw111");
+						ui_pop_size_kind(cxt);
+					}
+					
+					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_labelf(cxt, "content111");
 					ui_pop_size_kind(cxt);
 				}
 				
 				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-				ui_labelf(cxt, "content111");
+				ui_labelf(cxt, "content2");
 				ui_pop_size_kind(cxt);
-			}
-			
-			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-			ui_labelf(cxt, "content2");
-			ui_pop_size_kind(cxt);
-			
-			ui_colf(cxt, "col3")
-			{
+				
+				ui_colf(cxt, "col3")
+				{
+					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_labelf(cxt, "content3");
+					ui_labelf(cxt, "content33");
+					ui_labelf(cxt, "content333");
+					ui_pop_size_kind(cxt);
+				}
+				
 				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-				ui_labelf(cxt, "content3");
-				ui_labelf(cxt, "content33");
-				ui_labelf(cxt, "content333");
+				ui_labelf(cxt, "content4");
+				ui_labelf(cxt, "content5");
 				ui_pop_size_kind(cxt);
+				
 			}
-			
-			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-			ui_labelf(cxt, "content4");
-			ui_labelf(cxt, "content5");
-			ui_pop_size_kind(cxt);
-			
-			
 		}
 	}
 	ui_pop_size_kind(win->cxt);

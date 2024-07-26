@@ -153,10 +153,10 @@ internal b32 ui_signal(v2f pos, v2f size, v2f mpos)
   tl.y = pos.y;
   
   v2f br = {};
-  br.x = pos.x + size.x;
-  br.y = pos.y + size.y;
+  br.x = tl.x + size.x;
+  br.y = tl.y - size.y;
   
-  if(mpos.x > tl.x && mpos.x < br.x && mpos.y > tl.y && mpos.y < br.y)
+  if(mpos.x > tl.x && mpos.x < br.x && mpos.y < tl.y && mpos.y > br.y)
   {
 		hot = true;
   }
@@ -324,10 +324,6 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		cxt->hash_slots[slot].first = widget;
 		
 		widget->id = cxt->num++;
-		
-		// temp. needs to move out of here. chain links are meant to be remade every frame
-		// before it overflowed because parent's old chains persisted and kept ykwim
-		
 	}
 	else
 	{
@@ -585,9 +581,8 @@ internal void ui_layout(UI_Widget *root)
 		ui_layout_downward_dependent(root, axis);
 	}
 	ui_layout_pos(root);
-	ui_print_nodes_pre_order(root, 0);
-	printf("\n");
-	
+	//ui_print_nodes_pre_order(root, 0);
+	//printf("\n");
 }
 
 /*

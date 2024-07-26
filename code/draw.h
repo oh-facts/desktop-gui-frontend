@@ -150,9 +150,10 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 
 internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 {
-	
 	root->pos.x = root->computed_rel_position[0];
 	root->pos.y = root->computed_rel_position[1];
+	root->size.x = root->computed_size[0];
+	root->size.y = root->computed_size[1];
 	
 	if(!root->parent)
 	{
