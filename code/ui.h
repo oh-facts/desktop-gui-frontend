@@ -434,7 +434,7 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 	return widget;
 }
 
-internal void ui_begin_rowf(UI_Context *cxt, char *fmt, ...)
+internal UI_Signal ui_begin_rowf(UI_Context *cxt, char *fmt, ...)
 {
 	Arena_temp temp = scratch_begin(0,0);
 	va_list args;
@@ -446,6 +446,15 @@ internal void ui_begin_rowf(UI_Context *cxt, char *fmt, ...)
 	UI_Widget *widget = ui_make_widget(cxt, text);
 	ui_push_parent(cxt, widget);
 	arena_temp_end(&temp);
+	
+	b32 hot = ui_signal(widget->pos, widget->size, cxt->mpos);
+	widget->hot = hot;
+	
+	UI_Signal out = {};
+	out.hot = hot;
+	out.active = widget->active;
+	
+	return out;
 }
 
 internal void ui_end_row(UI_Context *cxt)
@@ -496,6 +505,33 @@ internal UI_Signal ui_labelf(UI_Context *cxt, char *fmt, ...)
 	va_end(args);
 	
 	UI_Signal out = ui_label(cxt, text); 
+	arena_temp_end(&temp);
+	return out;
+}
+
+internal UI_Signal ui_spacer(UI_Context *cxt, Str8 text)
+{
+	UI_Widget *widget = ui_make_widget(cxt, text);
+	
+	b32 hot = ui_signal(widget->pos, widget->size, cxt->mpos);
+	widget->hot = hot;
+	
+	UI_Signal out = {};
+	out.hot = hot;
+	out.active = widget->active;
+	
+	return out;
+}
+
+internal UI_Signal ui_spacerf(UI_Context *cxt, char *fmt, ...)
+{
+	Arena_temp temp = scratch_begin(0,0);
+	va_list args;
+	va_start(args, fmt);
+	Str8 text = push_str8fv(temp.arena, fmt, args);
+	va_end(args);
+	
+	UI_Signal out = ui_spacer(cxt, text); 
 	arena_temp_end(&temp);
 	return out;
 }

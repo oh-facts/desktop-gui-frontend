@@ -44,8 +44,7 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 	}
 	
 	ui_begin(cxt);
-	ui_push_pref_width(cxt, 0.3);
-	ui_push_pref_height(cxt, 0.2);
+	
 	ui_push_fixed_pos(cxt, win->pos);
 	
 	ui_push_size_kind(win->cxt, UI_SizeKind_ChildrenSum);
@@ -55,59 +54,50 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 		{
 			ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 			ui_label(cxt, win->title);
+			// TODO(mizu): Make size kind x and size kind y
+			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+			ui_push_pref_width(cxt, 0.8);
+			ui_push_pref_height(cxt, 0.08);
+			UI_Signal grabbed = ui_spacerf(cxt, "spacer");
+			
+			if(cxt->mheld)
+			{
+				if(grabbed.hot)
+				{
+					win->grabbed = 1;
+				}
+			}
+			else
+			{
+				win->grabbed = 0;
+			}
+			
+			ui_pop_size_kind(cxt);
+			ui_pop_pref_width(cxt);
+			ui_pop_pref_height(cxt);
 			win->minimize = ui_labelf(cxt, "hide").active;
 			ui_pop_size_kind(cxt);
 		}
+		
 		if(!win->minimize)
 		{
-			ui_rowf(cxt, "body")
+			ui_colf(cxt, "body")
 			{
-				ui_colf(cxt, "col1")
+				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
+				
+				for(i32 i = 0; i < 8; i++)
 				{
-					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-					ui_labelf(cxt, "content1");
-					ui_pop_size_kind(cxt);
-					
-					ui_rowf(cxt, "cw")
-					{
-						ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-						ui_labelf(cxt, "cw1");
-						ui_labelf(cxt, "cw11");
-						ui_labelf(cxt, "cw111");
-						ui_pop_size_kind(cxt);
-					}
-					
-					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-					ui_labelf(cxt, "content111");
-					ui_pop_size_kind(cxt);
+					ui_labelf(cxt, "content %d",i);
 				}
 				
-				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-				ui_labelf(cxt, "content2");
 				ui_pop_size_kind(cxt);
-				
-				ui_colf(cxt, "col3")
-				{
-					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-					ui_labelf(cxt, "content3");
-					ui_labelf(cxt, "content33");
-					ui_labelf(cxt, "content333");
-					ui_pop_size_kind(cxt);
-				}
-				
-				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-				ui_labelf(cxt, "content4");
-				ui_labelf(cxt, "content5");
-				ui_pop_size_kind(cxt);
-				
 			}
 		}
 	}
 	ui_pop_size_kind(win->cxt);
 	
 	ui_pop_fixed_pos(cxt);
-	ui_pop_pref_width(cxt);
-	ui_pop_pref_height(cxt);
+	
 	ui_layout(cxt->root);
 	d_draw_ui(draw, cxt->root);
 	ui_end(cxt);
@@ -148,6 +138,12 @@ void update_and_render(S_Platform * pf, Input *input)
 			R_TEXTURE_FILTER_LINEAR,
 			R_TEXTURE_FILTER_LINEAR,
 			R_TEXTURE_WRAP_REPEAT
+		};
+		
+		R_Texture_params pixel_art_params = {
+			R_TEXTURE_FILTER_NEAREST,
+			R_TEXTURE_FILTER_NEAREST,
+			R_TEXTURE_WRAP_CLAMP_TO_BORDER
 		};
 		
 		char codepoints[] =
@@ -193,15 +189,19 @@ void update_and_render(S_Platform * pf, Input *input)
 			
 			
 		}
+		
 		u32 *white_square = push_struct(arena, u32);
 		*white_square = 0xFFFFFFFF;
 		state->white_square = r_alloc_texture(white_square, 1, 1, 4, &tiled_params);
 		
+		Bitmap face = bitmap(str8_lit("C:/dev/saoirse/data/face.png"));
+		state->face = r_alloc_texture(face.data, face.w, face.h, face.n, &pixel_art_params);
+		
 		arena_temp_end(&temp);
 		
-		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas );
-		//create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f);
-		//create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f);
+		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas);
+		create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f, state->atlas);
+		create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f, state->atlas);
 	}
 	
 	State *state = (State*)pf->memory;
@@ -225,9 +225,8 @@ void update_and_render(S_Platform * pf, Input *input)
 	d_push_proj_view(&state->draw, m4f_ortho(-aspect, aspect, -1, 1, -1.001, 1000).fwd);
 	
 	update_window(pf, input, &state->win[0], &state->draw);
-	//update_window(pf, input, &state->win[1], &state->draw);
-	//update_window(pf, input, &state->win[2], &state->draw);
-	
+	update_window(pf, input, &state->win[1], &state->draw);
+	update_window(pf, input, &state->win[2], &state->draw);
 	
 	Str8 clocks = push_str8f(trans, "update and render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);
 	
@@ -237,6 +236,7 @@ void update_and_render(S_Platform * pf, Input *input)
 	
 	//ui_end(cxt);
 	
+	d_draw_img(&state->draw, v2f{{0,0}}, v2f{{1,1}}, D_COLOR_WHITE, state->face);
 	
 	d_pop_proj_view(&state->draw);
 	
