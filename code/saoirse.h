@@ -22,6 +22,8 @@ struct State
 	
 	Window win[3];
 	D_Bucket draw;
+	
+	Glyph atlas[256];
 	R_Font font[256];
 	R_Handle white_square;
 };

@@ -120,6 +120,8 @@ struct UI_Context
 	
 	UI_Widget *root;
   
+	Glyph *atlas;
+	
 	ui_make_style_struct_stack(Parent, parent);
 	ui_make_style_struct_stack(Color, text_color);
 	ui_make_style_struct_stack(Color, bg_color);
@@ -143,6 +145,40 @@ internal UI_Context *ui_alloc_cxt()
 	cxt->hash_slots = push_array(arena, UI_Hash_slot, cxt->hash_table_size);
 	
 	return cxt;
+}
+
+struct text_extent
+{
+	v2f tl;
+	v2f br;
+};
+
+internal text_extent ui_text_spacing_stats(Glyph *atlas, Str8 text, f32 scale)
+{
+	text_extent out = {};
+	
+	for(u32 i = 0; i < text.len; i ++)
+	{
+		char c = text.c[i];
+		
+		Glyph ch = *(atlas + (u32)c);
+		
+		if(out.tl.y < ch.y1 && c!=' ')
+		{
+			out.tl.y = ch.y1;
+		}
+		if(out.br.y > ch.y0 && c!= ' ')
+		{
+			out.br.y = ch.y0;
+		}
+		
+		out.br.x += ch.advance;
+	}
+	
+	out.tl *= scale;
+	out.br *= scale;
+	
+	return out;
 }
 
 internal b32 ui_signal(v2f pos, v2f size, v2f mpos)
@@ -372,6 +408,14 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
 		widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
 	}
+	else if(cxt->size_kind_stack.top->v == UI_SizeKind_TextContent)
+	{
+		// TODO(mizu): font size stack
+		text_extent extent = ui_text_spacing_stats(cxt->atlas, text, 0.00007);
+		
+		widget->pref_size[Axis2_X].value = extent.br.x;
+		widget->pref_size[Axis2_Y].value = extent.tl.y - extent.br.y;
+	}
 	
 	widget->pref_size[Axis2_X].kind = cxt->size_kind_stack.top->v;
 	widget->pref_size[Axis2_Y].kind = cxt->size_kind_stack.top->v;
@@ -471,14 +515,11 @@ internal void ui_layout_fixed_size(UI_Widget *root, Axis2 axis)
 		default:
 		case UI_SizeKind_Null:
 		break;
+		case UI_SizeKind_TextContent:
 		case UI_SizeKind_Pixels:
 		{
 			root->computed_size[axis] += root->pref_size[axis].value;
 		}break;
-		case UI_SizeKind_TextContent:
-		{
-			// TODO(mizu): use text spacing stats to calculate text width
-		}
 		
 	}
 }

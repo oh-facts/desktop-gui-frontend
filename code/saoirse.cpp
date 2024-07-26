@@ -11,7 +11,7 @@ internal void ui_end(UI_Context *cxt)
 	ui_pop_parent(cxt);
 }
 
-internal void create_window(Window *win, Str8 title, f32 x, f32 y)
+internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font)
 {
 	win->cxt = ui_alloc_cxt();
 	win->title = title;
@@ -21,7 +21,7 @@ internal void create_window(Window *win, Str8 title, f32 x, f32 y)
 	ui_push_pref_height(win->cxt, 0);
 	ui_push_fixed_pos(win->cxt, v2f{{0,0}});
 	ui_push_size_kind(win->cxt, UI_SizeKind_Null);
-	
+	win->cxt->atlas = font;
 	win->pos.x = x;
 	win->pos.y = y;
 }
@@ -53,7 +53,7 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 	{
 		ui_rowf(cxt, "titlebar")
 		{
-			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+			ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 			ui_label(cxt, win->title);
 			win->minimize = ui_labelf(cxt, "hide").active;
 			ui_pop_size_kind(cxt);
@@ -64,38 +64,38 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 			{
 				ui_colf(cxt, "col1")
 				{
-					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 					ui_labelf(cxt, "content1");
 					ui_pop_size_kind(cxt);
 					
 					ui_rowf(cxt, "cw")
 					{
-						ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+						ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 						ui_labelf(cxt, "cw1");
 						ui_labelf(cxt, "cw11");
 						ui_labelf(cxt, "cw111");
 						ui_pop_size_kind(cxt);
 					}
 					
-					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 					ui_labelf(cxt, "content111");
 					ui_pop_size_kind(cxt);
 				}
 				
-				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 				ui_labelf(cxt, "content2");
 				ui_pop_size_kind(cxt);
 				
 				ui_colf(cxt, "col3")
 				{
-					ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 					ui_labelf(cxt, "content3");
 					ui_labelf(cxt, "content33");
 					ui_labelf(cxt, "content333");
 					ui_pop_size_kind(cxt);
 				}
 				
-				ui_push_size_kind(cxt, UI_SizeKind_Pixels);
+				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 				ui_labelf(cxt, "content4");
 				ui_labelf(cxt, "content5");
 				ui_pop_size_kind(cxt);
@@ -176,12 +176,22 @@ void update_and_render(S_Platform * pf, Input *input)
 			{
 				state->font[c].tex = r_alloc_texture(temp_font[i].bmp, temp_font[i].w, temp_font[i].h, 1, &font_params);
 			}
+			
 			state->font[c].bearing = temp_font[i].bearing;
 			state->font[c].advance = temp_font[i].advance;
 			state->font[c].x0 = temp_font[i].x0;
 			state->font[c].x1 = temp_font[i].x1;
 			state->font[c].y0 = temp_font[i].y0;
 			state->font[c].y1 = temp_font[i].y1;
+			
+			state->atlas[c].bearing = temp_font[i].bearing;
+			state->atlas[c].advance = temp_font[i].advance;
+			state->atlas[c].x0 = temp_font[i].x0;
+			state->atlas[c].x1 = temp_font[i].x1;
+			state->atlas[c].y0 = temp_font[i].y0;
+			state->atlas[c].y1 = temp_font[i].y1;
+			
+			
 		}
 		u32 *white_square = push_struct(arena, u32);
 		*white_square = 0xFFFFFFFF;
@@ -189,7 +199,7 @@ void update_and_render(S_Platform * pf, Input *input)
 		
 		arena_temp_end(&temp);
 		
-		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8);
+		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas );
 		//create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f);
 		//create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f);
 	}

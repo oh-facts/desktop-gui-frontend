@@ -144,8 +144,8 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 		pass->rect_pass.proj_view = bucket->proj_view_top->v;
 		
 		//r_add_ui(list, ch.bmp_handle , (v2f){{xpos, ypos}}, (v2f){{w,h}} , p->color);
-		
 	}
+	
 }
 
 internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)

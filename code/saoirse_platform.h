@@ -22,6 +22,24 @@
 #include "base/base_math.cpp"
 #include "base/base_tcxt.cpp"
 
+struct Bitmap
+{
+	void *data;
+	i32 w;
+	i32 h;
+	i32 n;
+};
+
+struct Glyph
+{
+	u8 *bmp;
+	i32 w;
+	i32 h;
+	v2i bearing;
+	i32 x0, y0, x1, y1;
+	i32 advance;
+};
+
 #include "ui.h"
 #include "render.h"
 #include "draw.h"
@@ -213,24 +231,6 @@ internal void write_file(const char *filepath, FILE_TYPE type, void *data, size_
 	
 }
 
-struct Bitmap
-{
-	void *data;
-	i32 w;
-	i32 h;
-	i32 n;
-};
-
-struct Glyph
-{
-	u8 *bmp;
-	i32 w;
-	i32 h;
-	v2i bearing;
-	i32 x0, y0, x1, y1;
-	i32 advance;
-};
-
 internal Bitmap bitmap(Str8 path)
 {
 	Bitmap out = {};
@@ -250,7 +250,6 @@ internal Bitmap bitmap(Str8 path)
 
 internal Glyph *make_bmp_font(u8* path, char *codepoints, u32 num_cp, Arena* arena)
 {
-	
 	u8 *file_data = read_file(arena, (char*)path, FILE_TYPE_BINARY);
 	
 	stbtt_fontinfo font;
