@@ -14,20 +14,50 @@ internal void ui_end(UI_Context *cxt)
 	
 	for(i32 i = 0; i < cxt->hash_table_size; i++)
 	{
-		UI_Widget *hashed = (cxt->hash_slots + i)->first;
-		if(!hashed)
+		UI_Widget *first_hash = (cxt->hash_slots + i)->first;
+		if(!first_hash)
 		{
 			continue;
 		}
-		if(hashed->last_frame_touched_index != cxt->frames)
+		if(first_hash)
 		{
-			//printf("pruned %s\n", hashed->text.c);
-			ui_free_widget(cxt, hashed);
-			cxt->hash_slots[i].first = 0;
-		}
-		else
-		{
-			//printf("cache %s\n", hashed->text.c);
+			UI_Widget *cur = first_hash;
+UI_Widget *prev = 0;
+while(cur)
+{
+    if(cur->last_frame_touched_index != cxt->frames)
+    {
+		//printf("pruned %.*s\n", str8_varg(cur->text));
+    
+        if(prev)
+        {
+            prev->hash_next = cur->hash_next;
+            if (!cur->hash_next)
+            {
+                (cxt->hash_slots + i)->last = prev;
+            }
+        }
+        else
+        {
+            (cxt->hash_slots + i)->first = cur->hash_next;
+            if (!cur->hash_next)
+            {
+                (cxt->hash_slots + i)->last = 0;
+            }
+        }
+
+        UI_Widget *to_free = cur;
+        cur = cur->hash_next;
+        ui_free_widget(cxt, to_free);
+    }
+    else
+    {
+        prev = cur;
+        cur = cur->hash_next;
+    }
+}
+
+
 		}
 	}
 	//printf("\n");
@@ -163,11 +193,11 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 				
 				Arena_temp temp_arena = scratch_begin(0,0);
 				//* 1e-6
-				Str8 cmt_mem = push_str8f(temp_arena.arena, "cmt: %llu M", (u64)(pf->cmt));
+				Str8 cmt_mem = push_str8f(temp_arena.arena, "cmt: %llu M", (u64)(pf->cmt * 1e-6));
 				Str8 res_mem = push_str8f(temp_arena.arena, "res: %llu G", (u64)(pf->res * 1e-9));
 				
 				Str8 clocks =  push_str8f(temp_arena.arena, "update & render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);
-				//ui_label(cxt, clocks);
+				ui_label(cxt, clocks);
 				ui_label(cxt, cmt_mem);
 				ui_label(cxt, res_mem);
 				
@@ -309,7 +339,7 @@ void update_and_render(S_Platform * pf, Input *input)
 	f32 aspect = (pf->win_size.x * 1.f)/ pf->win_size.y;
 	d_push_proj_view(&state->draw, m4f_ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, -1.001, 1000).fwd);
 	
-	for(i32 i = 2; i < 3; i++)
+	for(i32 i = 0; i < 3; i++)
 	{
 		//printf("%d \n", i);
 		update_window(pf, input, state->win + i, &state->draw);

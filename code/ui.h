@@ -50,7 +50,7 @@ struct UI_Widget
   UI_Widget *next;
   UI_Widget *prev;
   UI_Widget *parent;
-	u64 num_child;
+  u64 num_child;
 	
 	UI_Widget *hash_next;
 	UI_Widget *hash_prev;
@@ -399,13 +399,13 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		
 		if(cxt->hash_slots[slot].last)
 		{
-//			cxt->hash_slots[slot].last
+			cxt->hash_slots[slot].last = cxt->hash_slots[slot].last->hash_next = widget;
 		}
 		else
 		{
-			
+			cxt->hash_slots[slot].last = cxt->hash_slots[slot].first = widget;
 		}
-		cxt->hash_slots[slot].first = widget;
+//		cxt->hash_slots[slot].first = widget;
 		widget->last_frame_touched_index = cxt->frames;
 		widget->id = cxt->num++;
 	}
