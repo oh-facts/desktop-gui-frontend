@@ -1,20 +1,43 @@
 #include "saoirse_platform.h"
+
 internal void ui_begin(UI_Context *cxt)
 {
 	UI_Widget *root = ui_make_widget(cxt, str8_lit("rootere"));
 	ui_push_parent(cxt, root);
 	cxt->root = root;
+	cxt->str_arena->used = ARENA_HEADER_SIZE;
 }
 
 internal void ui_end(UI_Context *cxt)
 {
 	ui_pop_parent(cxt);
+	
+	for(i32 i = 0; i < cxt->hash_table_size; i++)
+	{
+		UI_Widget *hashed = (cxt->hash_slots + i)->first;
+		if(!hashed)
+		{
+			continue;
+		}
+		if(hashed->last_frame_touched_index != cxt->frames)
+		{
+			//printf("pruned %s\n", hashed->text.c);
+			ui_free_widget(cxt, hashed);
+			cxt->hash_slots[i].first = 0;
+		}
+		else
+		{
+			//printf("cache %s\n", hashed->text.c);
+		}
+	}
+	//printf("\n");
 }
 
-internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font)
+internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font, WindowKind kind)
 {
 	win->cxt = ui_alloc_cxt();
 	win->title = title;
+	win->kind = kind;
 	ui_push_text_color(win->cxt, D_COLOR_WHITE);
 	ui_push_bg_color(win->cxt, D_COLOR_WHITE);
 	ui_push_pref_width(win->cxt, 0);
@@ -24,6 +47,10 @@ internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font)
 	win->cxt->atlas = font;
 	win->pos.x = x;
 	win->pos.y = y;
+	win->cxt->frames = 0;
+	win->cur_row = 0;
+	win->visible_rows = 10;
+	win->max_rows = 100;
 }
 
 internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket *draw)
@@ -37,6 +64,7 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 	cxt->mpos = screen_norm;
 	cxt->mheld = input_is_mouse_held(input, MOUSE_BUTTON_LEFT);
 	cxt->mclick = input_is_click(input, MOUSE_BUTTON_LEFT);
+	cxt->frames++;
 	
 	if(win->grabbed)
 	{
@@ -47,55 +75,111 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 	
 	ui_push_fixed_pos(cxt, win->pos);
 	
-	ui_push_size_kind(win->cxt, UI_SizeKind_ChildrenSum);
+	ui_push_size_kind_y(win->cxt, UI_SizeKind_ChildrenSum);
+	ui_push_size_kind_x(cxt, UI_SizeKind_Pixels);
+	ui_push_pref_width(cxt, 0.8);
+	
 	ui_colf(cxt, "window")
 	{
 		ui_rowf(cxt, "titlebar")
 		{
-			ui_push_size_kind(cxt, UI_SizeKind_TextContent);
-			ui_label(cxt, win->title);
-			// TODO(mizu): Make size kind x and size kind y
-			ui_push_size_kind(cxt, UI_SizeKind_Pixels);
-			ui_push_pref_width(cxt, 0.8);
-			ui_push_pref_height(cxt, 0.08);
-			UI_Signal grabbed = ui_spacerf(cxt, "spacer");
-			
-			if(cxt->mheld)
+			ui_push_size_kind_x(cxt, UI_SizeKind_ChildrenSum);
+			UI_Signal grabbed = ui_begin_rowf(cxt, "title part");
 			{
-				if(grabbed.hot)
+				ui_pop_size_kind_x(cxt);
+				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
+				ui_label(cxt, win->title);
+				ui_pop_size_kind(cxt);
+				if(cxt->mheld)
 				{
-					win->grabbed = 1;
+					if(grabbed.hot)
+					{
+						win->grabbed = 1;
+					}
 				}
+				else
+				{
+					win->grabbed = 0;
+				}
+				
+				Arena_temp temp_arena = scratch_begin(0,0);
+				Str8 hide_str = push_str8f(temp_arena.arena, "hide");
+				f32 title_width = ui_text_spacing_stats(cxt->atlas, win->title, 0.00007).br.x;
+				title_width += ui_text_spacing_stats(cxt->atlas, hide_str, 0.00007).br.x;
+				scratch_end(&temp_arena);
+				
+				ui_push_size_kind_x(cxt, UI_SizeKind_Pixels);
+				ui_push_pref_width(cxt, 0.8 - title_width);
+				ui_spacerf(cxt, "this spspacerino");
+				ui_pop_pref_width(cxt);
+				ui_pop_size_kind_x(cxt);
 			}
-			else
-			{
-				win->grabbed = 0;
-			}
-			
-			ui_pop_size_kind(cxt);
-			ui_pop_pref_width(cxt);
-			ui_pop_pref_height(cxt);
+			ui_end_row(cxt);
+			ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 			win->minimize = ui_labelf(cxt, "hide").active;
 			ui_pop_size_kind(cxt);
 		}
 		
 		if(!win->minimize)
 		{
-			ui_colf(cxt, "body")
+			UI_Signal body_sig = ui_begin_colf(cxt, "body");
+			
+			if(win->kind == WindowKind_Null)
+			{
+				if(body_sig.hot)
+				{
+					// scroll
+					if(input->scroll < 0)
+					{
+						win->cur_row++;
+					}
+					else if(input->scroll > 0)
+					{
+						win->cur_row --;
+					}
+					
+					// clamp
+					if(win->cur_row + win->visible_rows > win->max_rows)
+					{
+						win->cur_row = win->max_rows - win->visible_rows;
+					}
+					else if(win->cur_row < 0)
+					{
+						win->cur_row = 0;
+					}
+				}
+				{
+					ui_push_size_kind(cxt, UI_SizeKind_TextContent);
+					for(i32 i = win->cur_row; i < win->visible_rows + win->cur_row; i++)
+					{
+						ui_labelf(cxt, "content %d",i);
+					}
+					ui_pop_size_kind(cxt);
+				}
+			}
+			else if(win->kind == WindowKind_Profiler)
 			{
 				ui_push_size_kind(cxt, UI_SizeKind_TextContent);
 				
-				for(i32 i = 0; i < 8; i++)
-				{
-					ui_labelf(cxt, "content %d",i);
-				}
+				Arena_temp temp_arena = scratch_begin(0,0);
+				//* 1e-6
+				Str8 cmt_mem = push_str8f(temp_arena.arena, "cmt: %llu M", (u64)(pf->cmt));
+				Str8 res_mem = push_str8f(temp_arena.arena, "res: %llu G", (u64)(pf->res * 1e-9));
 				
+				Str8 clocks =  push_str8f(temp_arena.arena, "update & render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);
+				//ui_label(cxt, clocks);
+				ui_label(cxt, cmt_mem);
+				ui_label(cxt, res_mem);
+				
+				scratch_end(&temp_arena);
 				ui_pop_size_kind(cxt);
 			}
+			
+			ui_end_col(cxt);
 		}
 	}
 	ui_pop_size_kind(win->cxt);
-	
+	ui_pop_pref_width(win->cxt);
 	ui_pop_fixed_pos(cxt);
 	
 	ui_layout(cxt->root);
@@ -155,7 +239,7 @@ void update_and_render(S_Platform * pf, Input *input)
 			
 			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 			
-			'.', '?', ',', '-', ':', '!',
+			'&', '.', '?', ',', '-', ':', '!',
 			
 			' ', '\n'
 		};
@@ -199,14 +283,14 @@ void update_and_render(S_Platform * pf, Input *input)
 		
 		arena_temp_end(&temp);
 		
-		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas);
-		create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f, state->atlas);
-		create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f, state->atlas);
+		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas, WindowKind_Null);
+		create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f, state->atlas, WindowKind_Null);
+		create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f, state->atlas, WindowKind_Profiler);
 	}
 	
 	State *state = (State*)pf->memory;
 	
-	Arena *arena = state->arena;
+	//Arena *arena = state->arena;
 	Arena *trans = state->trans;
 	
 	Arena_temp temp = arena_temp_begin(trans);
@@ -221,20 +305,15 @@ void update_and_render(S_Platform * pf, Input *input)
 		state->font
 	};
 	
+	f32 zoom = 1;
 	f32 aspect = (pf->win_size.x * 1.f)/ pf->win_size.y;
-	d_push_proj_view(&state->draw, m4f_ortho(-aspect, aspect, -1, 1, -1.001, 1000).fwd);
+	d_push_proj_view(&state->draw, m4f_ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, -1.001, 1000).fwd);
 	
-	update_window(pf, input, &state->win[0], &state->draw);
-	update_window(pf, input, &state->win[1], &state->draw);
-	update_window(pf, input, &state->win[2], &state->draw);
-	
-	Str8 clocks = push_str8f(trans, "update and render: %llu", tcxt.counters_last[DEBUG_CYCLE_COUNTER_UPDATE_AND_RENDER].cycle_count);
-	
-	//d_draw_text(&state->draw, str8_lit("I love you :D"), v2f{{0,0.4}}, &default_text_params);
-	//d_draw_rect(&state->draw, v2f{{0, 0}}, v2f{{0.6, 0.2}}, D_COLOR_THEME_1);
-	//d_draw_text(&state->draw, clocks, v2f{{0,0}}, &default_text_params);
-	
-	//ui_end(cxt);
+	for(i32 i = 2; i < 3; i++)
+	{
+		//printf("%d \n", i);
+		update_window(pf, input, state->win + i, &state->draw);
+	}
 	
 	d_draw_img(&state->draw, v2f{{0,0}}, v2f{{1,1}}, D_COLOR_WHITE, state->face);
 	
@@ -242,9 +321,12 @@ void update_and_render(S_Platform * pf, Input *input)
 	
 	r_submit(&state->draw.list, pf->win_size);
 	
+	//printf("%d\n",awa);
+	
 	arena_temp_end(&temp);
 	
 	END_TIMED_BLOCK(UPDATE_AND_RENDER);
+	
 	
 	process_debug_counters();
 }

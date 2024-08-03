@@ -22,6 +22,12 @@
 #include "base/base_math.cpp"
 #include "base/base_tcxt.cpp"
 
+struct Rect
+{
+	v2f tl;
+	v2f br;
+};
+
 struct Bitmap
 {
 	void *data;

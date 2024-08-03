@@ -31,6 +31,12 @@ internal b32 os_win32_commit(void *ptr, u64 size)
 		return 0;
 	}
 	total_cmt += size;
+	
+	if(total_cmt > 22806528)
+	{
+		volatile int i = 0;
+	}
+	
 	return 1;
 }
 
@@ -79,7 +85,6 @@ struct W32_Window
 	HDC dc;
 	b32 closed;
 };
-
 
 struct OS_Event
 {
@@ -165,9 +170,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       input.mpos.x = LOWORD(lParam);
       input.mpos.y = HIWORD(lParam);
 			
-			OS_Event *event = os_push_event();
-			event->mpos.x = LOWORD(lParam);
-			event->mpos.y = HIWORD(lParam);
+			//OS_Event *event = os_push_event();
+			//event->mpos.x = LOWORD(lParam);
+			//event->mpos.y = HIWORD(lParam);
 			//printf("%d %d %d\n", i++, input.mpos.x, input.mpos.y);
 			
 		}break;
@@ -441,7 +446,8 @@ int main(int argc, char **argv)
 		
 		pf.win_size.x = win->w;
 		pf.win_size.y = win->h;
-		
+		pf.res = total_res;
+		pf.cmt = total_cmt;
 		update_and_render(&pf, &input);
 		input_update(&input);
 		SwapBuffers(win->dc);

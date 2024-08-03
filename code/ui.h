@@ -39,7 +39,8 @@ enum UI_Flags
 {
   UI_Flags_has_text = 1 << 0,
   UI_Flags_has_bg = 1 << 1,
-  UI_Flags_clickable = 1 << 2,
+	UI_Flags_clickable = 1 << 2,
+  UI_Flags_has_scroll = 1 << 3,
 };
 
 struct UI_Widget
@@ -70,6 +71,8 @@ struct UI_Widget
 	// calculated after hierearchy pass
 	f32 computed_rel_position[Axis2_COUNT];
 	f32 computed_size[Axis2_COUNT];
+	
+	// persistant
 	v2f pos;
 	v2f size;
 	
@@ -90,7 +93,9 @@ ui_make_style_struct(Pref_width, f32)
 ui_make_style_struct(Pref_height, f32)
 ui_make_style_struct(Fixed_pos, v2f)
 ui_make_style_struct(Axis2, Axis2)
-ui_make_style_struct(SizeKind, UI_SizeKind)
+
+ui_make_style_struct(SizeKind_x, UI_SizeKind)
+ui_make_style_struct(SizeKind_y, UI_SizeKind)
 
 #define ui_make_style_struct_stack(Name, name) \
 struct \
@@ -109,7 +114,7 @@ struct UI_Hash_slot
 struct UI_Context
 {
   Arena *arena;
-  Arena *build_arena;
+  Arena *str_arena;
 	
 	v2f mpos;
   b32 mheld;
@@ -119,8 +124,10 @@ struct UI_Context
 	UI_Hash_slot *hash_slots;
 	
 	UI_Widget *root;
-  
+  u64 frames;
 	Glyph *atlas;
+	
+	UI_Widget *widget_free_list;
 	
 	ui_make_style_struct_stack(Parent, parent);
 	ui_make_style_struct_stack(Color, text_color);
@@ -129,7 +136,8 @@ struct UI_Context
 	ui_make_style_struct_stack(Pref_height, pref_height);
 	ui_make_style_struct_stack(Fixed_pos, fixed_pos);
 	ui_make_style_struct_stack(Axis2, child_layout_axis);
-	ui_make_style_struct_stack(SizeKind, size_kind);
+	ui_make_style_struct_stack(SizeKind_x, size_kind_x);
+	ui_make_style_struct_stack(SizeKind_y, size_kind_y);
 	
 	u32 num;
 };
@@ -143,7 +151,7 @@ internal UI_Context *ui_alloc_cxt()
 	cxt->arena = arena;
 	cxt->hash_table_size = 1024;
 	cxt->hash_slots = push_array(arena, UI_Hash_slot, cxt->hash_table_size);
-	
+	cxt->str_arena = arena_create();
 	return cxt;
 }
 
@@ -199,6 +207,29 @@ internal b32 ui_signal(v2f pos, v2f size, v2f mpos)
   return hot;
 }
 
+internal UI_Widget *ui_alloc_widget(UI_Context *cxt)
+{
+	UI_Widget *out = cxt->widget_free_list;
+	
+	if(out)
+	{
+		cxt->widget_free_list= cxt->widget_free_list->next;
+		memset(out, 0, sizeof(*out));
+	}
+	else
+	{
+		out = push_struct(cxt->arena, UI_Widget);
+	}
+	
+	return out;
+}
+
+internal void ui_free_widget(UI_Context *cxt, UI_Widget *node)
+{
+	node->next = cxt->widget_free_list;
+	cxt->widget_free_list = node;
+}
+
 #define ui_make_alloc_node(Name, name) \
 internal UI_##Name##_node *ui_alloc_##name##_node(UI_Context *cxt) \
 { \
@@ -243,8 +274,11 @@ ui_make_free_node(Fixed_pos, fixed_pos)
 ui_make_alloc_node(Axis2, child_layout_axis)
 ui_make_free_node(Axis2, child_layout_axis)
 
-ui_make_alloc_node(SizeKind, size_kind)
-ui_make_free_node(SizeKind, size_kind)
+ui_make_alloc_node(SizeKind_x, size_kind_x)
+ui_make_free_node(SizeKind_x, size_kind_x)
+
+ui_make_alloc_node(SizeKind_y, size_kind_y)
+ui_make_free_node(SizeKind_y, size_kind_y)
 
 
 #define ui_make_push_style(Name, name, Type) \
@@ -302,9 +336,17 @@ ui_make_pop_style(Axis2, child_layout_axis)
 
 ui_make_set_next_style(Axis2, child_layout_axis, Axis2)
 
-ui_make_push_style(SizeKind, size_kind, UI_SizeKind)
-ui_make_pop_style(SizeKind, size_kind)
+ui_make_push_style(SizeKind_x, size_kind_x, UI_SizeKind)
+ui_make_pop_style(SizeKind_x, size_kind_x)
 
+ui_make_push_style(SizeKind_y, size_kind_y, UI_SizeKind)
+ui_make_pop_style(SizeKind_y, size_kind_y)
+
+#define ui_push_size_kind(cxt, kind) ui_push_size_kind_x(cxt, kind); \
+ui_push_size_kind_y(cxt, kind);
+
+#define ui_pop_size_kind(cxt) ui_pop_size_kind_x(cxt); \
+ui_pop_size_kind_y(cxt);
 
 // djb2
 unsigned long
@@ -351,14 +393,20 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 	
 	if(!widget)
 	{
-		widget = push_struct(cxt->arena, UI_Widget);
+		widget = ui_alloc_widget(cxt);
 		widget->hash = text_hash;
-		widget->text.c = push_array(cxt->arena, u8, text.len);
-		widget->text.len = text.len;
-		str8_cpy(&widget->text, &text);
 		u64 slot = text_hash % cxt->hash_table_size;
-		cxt->hash_slots[slot].first = widget;
 		
+		if(cxt->hash_slots[slot].last)
+		{
+//			cxt->hash_slots[slot].last
+		}
+		else
+		{
+			
+		}
+		cxt->hash_slots[slot].first = widget;
+		widget->last_frame_touched_index = cxt->frames;
 		widget->id = cxt->num++;
 	}
 	else
@@ -367,16 +415,21 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 		{
 			widget->active = !widget->active;
 		}
+		
 		widget->prev = 0;
 		widget->last = 0;
 		widget->next = 0;
-		
+		widget->last_frame_touched_index = cxt->frames;
 		widget->computed_size[0] = 0;
 		widget->computed_size[1] = 0;
 		
 		widget->computed_rel_position[0] = 0;
 		widget->computed_rel_position[1] = 0;
 	}
+	
+	widget->text.c = push_array(cxt->str_arena, u8, text.len);
+	widget->text.len = text.len;
+	str8_cpy(&widget->text, &text);
 	
 	if(cxt->parent_stack.top)
 	{
@@ -398,30 +451,56 @@ internal UI_Widget *ui_make_widget(UI_Context *cxt, Str8 text)
 	widget->color = cxt->text_color_stack.top->v;
 	widget->bg_color = cxt->bg_color_stack.top->v;
 	
-	if(cxt->size_kind_stack.top->v == UI_SizeKind_ChildrenSum)
+	widget->pref_size[Axis2_X].kind = cxt->size_kind_x_stack.top->v;
+	
+	switch(widget->pref_size[Axis2_X].kind)
 	{
-		widget->pref_size[Axis2_X].value = 0;
-		widget->pref_size[Axis2_Y].value = 0;
-	}
-	else if(cxt->size_kind_stack.top->v == UI_SizeKind_Pixels)
-	{
-		widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
-		widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
-	}
-	else if(cxt->size_kind_stack.top->v == UI_SizeKind_TextContent)
-	{
-		// TODO(mizu): font size stack
-		text_extent extent = ui_text_spacing_stats(cxt->atlas, text, 0.00007);
+		default:
+		case UI_SizeKind_Null: {}break;
+		case UI_SizeKind_ChildrenSum:
+		{
+			widget->pref_size[Axis2_X].value = 0;
+		}break;
+		case UI_SizeKind_PercentOfParent:
+		case UI_SizeKind_Pixels:
+		{
+			widget->pref_size[Axis2_X].value = cxt->pref_width_stack.top->v;
+		}break;
+		case UI_SizeKind_TextContent:
+		{
+			text_extent extent = ui_text_spacing_stats(cxt->atlas, text, 0.00007);
+			
+			widget->pref_size[Axis2_X].value = extent.br.x;
+			
+		}break;
 		
-		widget->pref_size[Axis2_X].value = extent.br.x;
-		widget->pref_size[Axis2_Y].value = extent.tl.y - extent.br.y;
 	}
 	
-	widget->pref_size[Axis2_X].kind = cxt->size_kind_stack.top->v;
-	widget->pref_size[Axis2_Y].kind = cxt->size_kind_stack.top->v;
+	widget->pref_size[Axis2_Y].kind = cxt->size_kind_y_stack.top->v;
 	
-	//widget->computed_rel_position[Axis2_X] = cxt->fixed_pos_stack->pos.x;
-	//widget->computed_rel_position[Axis2_Y] = cxt->fixed_pos_stack->pos.y;
+	switch(widget->pref_size[Axis2_Y].kind)
+	{
+		default:
+		case UI_SizeKind_Null: {}break;
+		
+		case UI_SizeKind_ChildrenSum:
+		{
+			widget->pref_size[Axis2_Y].value = 0;
+		}break;
+		case UI_SizeKind_PercentOfParent:
+		case UI_SizeKind_Pixels:
+		{
+			widget->pref_size[Axis2_Y].value = cxt->pref_height_stack.top->v;
+		}break;
+		case UI_SizeKind_TextContent:
+		{
+			text_extent extent = ui_text_spacing_stats(cxt->atlas, text, 0.00007);
+			
+			widget->pref_size[Axis2_Y].value = extent.tl.y - extent.br.y;
+		}break;
+		
+	}
+	
 	
 	widget->fixed_position = cxt->fixed_pos_stack.top->v;
 	
@@ -462,7 +541,7 @@ internal void ui_end_row(UI_Context *cxt)
 	ui_pop_parent(cxt);
 }
 
-internal void ui_begin_colf(UI_Context *cxt, char *fmt, ...)
+internal UI_Signal ui_begin_colf(UI_Context *cxt, char *fmt, ...)
 {
 	Arena_temp temp = scratch_begin(0,0);
 	va_list args;
@@ -474,6 +553,15 @@ internal void ui_begin_colf(UI_Context *cxt, char *fmt, ...)
 	UI_Widget *widget = ui_make_widget(cxt, text);
 	ui_push_parent(cxt, widget);
 	arena_temp_end(&temp);
+	
+	b32 hot = ui_signal(widget->pos, widget->size, cxt->mpos);
+	widget->hot = hot;
+	
+	UI_Signal out = {};
+	out.hot = hot;
+	out.active = widget->active;
+	
+	return out;
 }
 
 internal void ui_end_col(UI_Context *cxt)
@@ -560,6 +648,24 @@ internal void ui_layout_fixed_size(UI_Widget *root, Axis2 axis)
 	}
 }
 
+internal void ui_layout_upward_dependent(UI_Widget *root, Axis2 axis)
+{
+	
+	if(root->pref_size[axis].kind == UI_SizeKind_PercentOfParent)
+	{
+		if(root->parent->pref_size[axis].kind != UI_SizeKind_ChildrenSum)
+		{
+			//printf("%s\n", root->text.c);
+		}
+	}
+	
+	
+	for(UI_Widget *child = root->first; child; child = child->next)
+	{
+		ui_layout_upward_dependent(child, axis);
+	}
+}
+
 internal void ui_layout_downward_dependent(UI_Widget *root, Axis2 axis)
 {
 	for(UI_Widget *child = root->first; child; child = child->next)
@@ -591,8 +697,8 @@ internal void ui_layout_pos(UI_Widget *root)
 {
 	if(root->parent)
 	{
-		root->computed_rel_position[0] += root->parent->computed_rel_position[0];
-		root->computed_rel_position[1] += root->parent->computed_rel_position[1];
+		root->computed_rel_position[0] = root->parent->computed_rel_position[0];
+		root->computed_rel_position[1] = root->parent->computed_rel_position[1];
 	}
 	
 	// TODO(mizu): Note how this just adds / subtracts instead of cumulatively adding 
@@ -609,7 +715,6 @@ internal void ui_layout_pos(UI_Widget *root)
 			root->computed_rel_position[Axis2_Y] = root->prev->computed_rel_position[Axis2_Y] - root->prev->computed_size[Axis2_Y];
 		}
 	}
-	
 	
 	for(UI_Widget *child = root->first; child; child = child->next)
 	{
@@ -655,6 +760,7 @@ internal void ui_layout(UI_Widget *root)
 	for(Axis2 axis = (Axis2)0; axis < Axis2_COUNT; axis = (Axis2)(axis + 1))
 	{
 		ui_layout_fixed_size(root, axis);
+		ui_layout_upward_dependent(root, axis);
 		ui_layout_downward_dependent(root, axis);
 	}
 	ui_layout_pos(root);

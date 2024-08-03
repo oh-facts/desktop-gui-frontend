@@ -50,15 +50,24 @@ struct R_Rect
 
 struct R_Batch
 {
+	R_Batch *next;
 	size_t size;
   u8 *base;
   size_t used;
   u32 count;
 };
 
+struct R_Batch_list
+{
+	R_Batch *first;
+	R_Batch *last;
+	
+	u32 num;
+};
+
 struct R_Rect_pass
 {
-	R_Batch rects;
+	R_Batch_list rects;
 	m4f proj_view;
 };
 
@@ -110,13 +119,37 @@ internal R_Pass *r_push_pass_list(Arena *arena, R_Pass_list *list, R_PASS_KIND k
 	return pass;
 }
 
+internal R_Batch *r_push_batch_list(Arena *arena, R_Batch_list *list)
+{
+	R_Batch *node = push_struct(arena, R_Batch);
+	list->num ++;
+	if(list->last)
+	{
+		list->last = list->last->next = node;
+	}
+	else
+	{
+		list->last = list->first = node;
+	}
+	
+	return node;
+}
+
 #define r_push_batch(arena,batch, type) (type*)r_push_batch_(arena, batch, sizeof(type))
 
-internal void *r_push_batch_(Arena *arena, R_Batch *batch, u64 size)
+internal void *r_push_batch_(Arena *arena, R_Batch_list *list, u64 size)
 {
+	R_Batch *batch = list->last;
+	
+	if(!batch || (batch->used + size > batch->size))
+	{
+		batch = r_push_batch_list(arena, list);
+	}
+	
 	if(!batch->base)
 	{
 		batch->base = push_array(arena, u8, size * 1000);
+		batch->size = size * 1000;
 	}
 	
 	void *out = batch->base + batch->used;

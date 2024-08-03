@@ -3,6 +3,8 @@
 #ifndef BASE_STRING_H
 #define BASE_STRING_H
 
+#define str8_varg(S) (int)((S).len), ((S).c)
+
 struct Str8
 {
   u8 *c;
