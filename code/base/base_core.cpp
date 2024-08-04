@@ -2,32 +2,32 @@ void* _arena_alloc(Arena* arena, size_t size)
 {
 	u64 pos_mem = AlignPow2(arena->used, arena->align);
 	u64 pos_new = pos_mem + size;
-	
+
 	if(arena->res < pos_new)
 	{
-		// TODO(mizu): deal with reserving more (chain arenas)
+	// TODO(mizu): deal with reserving more (chain arenas)
 		INVALID_CODE_PATH();
 	}
-	
+
 	if(arena->cmt < pos_new)
 	{
 		u64 cmt_new_aligned, cmt_new_clamped, cmt_new_size;
-		
+
 		cmt_new_aligned = AlignPow2(pos_new, ARENA_COMMIT_SIZE);
 		cmt_new_clamped = ClampTop(cmt_new_aligned, arena->res);
 		cmt_new_size    = cmt_new_clamped - arena->cmt;
 		os_commit((u8*)arena + arena->cmt, cmt_new_size);
 		arena->cmt = cmt_new_clamped;
 	}
-	
+
 	void *memory = 0;
-  
-  if (arena->cmt >= pos_new) 
+
+	if (arena->cmt >= pos_new) 
 	{
-    memory = (u8*)arena + pos_mem;
-    arena->used = pos_new;
+		memory = (u8*)arena + pos_mem;
+		arena->used = pos_new;
 	}
-	
+
 	return memory;
 }
 

@@ -5,30 +5,30 @@
 
 struct R_Handle
 {
-  u64 u64_m[1];
+	u64 u64_m[1];
 };
 
 enum R_TEXTURE_FILTER
 {
-  R_TEXTURE_FILTER_NEAREST,
-  R_TEXTURE_FILTER_LINEAR,
+	R_TEXTURE_FILTER_NEAREST,
+	R_TEXTURE_FILTER_LINEAR,
 	R_TEXTURE_FILTER_COUNT
 };
 
 enum R_TEXTURE_WRAP
 {
-  R_TEXTURE_WRAP_CLAMP_TO_BORDER,
-  R_TEXTURE_WRAP_REPEAT,
+	R_TEXTURE_WRAP_CLAMP_TO_BORDER,
+	R_TEXTURE_WRAP_REPEAT,
 	R_TEXTURE_WRAP_COUNT
 };
 
 enum R_POLYGON_MODE
 {
-  R_POLYGON_MODE_UNINITIALIZED,
-  R_POLYGON_MODE_POINT,
-  R_POLYGON_MODE_LINE,
-  R_POLYGON_MODE_FILL,
-  R_POLYGON_MODE_COUNT
+	R_POLYGON_MODE_UNINITIALIZED,
+	R_POLYGON_MODE_POINT,
+	R_POLYGON_MODE_LINE,
+	R_POLYGON_MODE_FILL,
+	R_POLYGON_MODE_COUNT
 };
 
 struct R_Texture_params
@@ -42,7 +42,7 @@ struct R_Rect
 {
 	v2f tl;
 	v2f br;
-	
+
 	v4f color;
 	R_Handle tex;
 	R_Handle pad;
@@ -52,9 +52,9 @@ struct R_Batch
 {
 	R_Batch *next;
 	size_t size;
-  u8 *base;
-  size_t used;
-  u32 count;
+	u8 *base;
+	size_t used;
+	u32 count;
 };
 
 struct R_Batch_list

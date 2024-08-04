@@ -7,8 +7,8 @@
 
 struct Str8
 {
-  u8 *c;
-  u64 len;
+	u8 *c;
+	u64 len;
 };
 
 #define str8_lit(c) Str8{(u8*)c, sizeof(c) - 1}

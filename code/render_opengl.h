@@ -26,12 +26,12 @@ struct R_Opengl_state
 global R_Opengl_state r_opengl_state;
 
 internal void APIENTRY glDebugOutput(GLenum source, 
-																		 GLenum type, 
-																		 unsigned int id, 
-																		 GLenum severity, 
-																		 GLsizei length, 
-																		 const char *message, 
-																		 const void *userParam);
+									GLenum type, 
+									unsigned int id, 
+									GLenum severity, 
+									GLsizei length, 
+									const char *message, 
+									const void *userParam);
 
 
 internal void check_compile_errors(GLuint shader, const char *type);
@@ -41,11 +41,11 @@ internal GLuint r_opengl_make_buffer(size_t size);
 
 internal void r_opengl_init();
 internal R_Handle r_opengl_alloc_texture(void *data, i32 w, i32 h, i32 n, R_Texture_params *p);
-internal void r_opengl_submit(R_Pass_list *list);
+internal void r_opengl_submit(R_Pass_list *list, v2i win_size);
 
 global u32 sprite_draw_indices[] = {
-  0,1,3,
-  1,2,3
+	0,1,3,
+	1,2,3
 };
 
 global char* r_vs_ui_src =
@@ -62,9 +62,9 @@ struct TextObject
 {
 	vec2 tl;
 	vec2 br;
-vec4 color;
-uvec2 sprite_id;
-uvec2 padd;
+	vec4 color;
+	uvec2 sprite_id;
+	uvec2 padd;
 };
 
 layout (std430, binding = 0) buffer ssbo {
@@ -86,12 +86,12 @@ void main()
 		{{ obj.br.x,  obj.tl.y}, {1,1}},
 		{{ obj.br.x, obj.br.y}, {1,0}},
 		{{ obj.tl.x,  obj.br.y}, {0,0}},
-};
+	};
 	Vertex vertex = vertices[gl_VertexID];
 	
-texId = obj.sprite_id;
-col = obj.color;
-tex = vertex.uv;
+	texId = obj.sprite_id;
+	col = obj.color;
+	tex = vertex.uv;
 	gl_Position =  vec4(vertex.pos, 0.5, 1.0) * proj;// * obj.model;
 }
 

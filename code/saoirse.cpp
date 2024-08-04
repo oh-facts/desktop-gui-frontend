@@ -22,42 +22,40 @@ internal void ui_end(UI_Context *cxt)
 		if(first_hash)
 		{
 			UI_Widget *cur = first_hash;
-UI_Widget *prev = 0;
-while(cur)
-{
-    if(cur->last_frame_touched_index != cxt->frames)
-    {
-		//printf("pruned %.*s\n", str8_varg(cur->text));
-    
-        if(prev)
-        {
-            prev->hash_next = cur->hash_next;
-            if (!cur->hash_next)
-            {
-                (cxt->hash_slots + i)->last = prev;
-            }
-        }
-        else
-        {
-            (cxt->hash_slots + i)->first = cur->hash_next;
-            if (!cur->hash_next)
-            {
-                (cxt->hash_slots + i)->last = 0;
-            }
-        }
+			UI_Widget *prev = 0;
+			while(cur)
+			{
+				if(cur->last_frame_touched_index != cxt->frames)
+				{
+					//printf("pruned %.*s\n", str8_varg(cur->text));
+				
+					if(prev)
+					{
+						prev->hash_next = cur->hash_next;
+						if (!cur->hash_next)
+						{
+							(cxt->hash_slots + i)->last = prev;
+						}
+					}
+					else
+					{
+						(cxt->hash_slots + i)->first = cur->hash_next;
+						if (!cur->hash_next)
+						{
+							(cxt->hash_slots + i)->last = 0;
+						}
+					}
 
-        UI_Widget *to_free = cur;
-        cur = cur->hash_next;
-        ui_free_widget(cxt, to_free);
-    }
-    else
-    {
-        prev = cur;
-        cur = cur->hash_next;
-    }
-}
-
-
+					UI_Widget *to_free = cur;
+					cur = cur->hash_next;
+					ui_free_widget(cxt, to_free);
+				}
+				else
+				{
+					prev = cur;
+					cur = cur->hash_next;
+				}
+			}
 		}
 	}
 	//printf("\n");

@@ -68,7 +68,7 @@ typedef int32_t b32;
 
 internal b32 is_pow_of_2(size_t addr)
 {
-  return (addr & (addr-1)) == 0;
+	return (addr & (addr-1)) == 0;
 }
 
 struct Arena
@@ -93,8 +93,8 @@ struct Arena
 
 struct Arena_temp
 {
-  Arena *arena;
-  size_t pos;
+	Arena *arena;
+	size_t pos;
 };
 
 #define push_struct(arena, type) (type*)_arena_alloc(arena, sizeof(type))

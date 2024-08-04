@@ -61,19 +61,19 @@ Str8 os_win32_get_app_dir(Arena *arena)
 {
 	char buffer[256];
 	DWORD len = GetModuleFileName(0, buffer, 256);
-	
+
 	char *c = &buffer[len];
-  while(*(--c) != '\\')
-  {
-    *c = 0;
-    --len;
-  }
-  
+	while(*(--c) != '\\')
+	{
+		*c = 0;
+		--len;
+	}
+
 	u8 *str = push_array(arena, u8, len);
 	mem_cpy(str, buffer, len);
-	
+
 	Str8 out = str8(str, len);
-	
+
 	return out;
 }
 
@@ -132,58 +132,58 @@ W32_Window *win;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-  switch (msg)
-  {
-    
-    case WM_MOUSEWHEEL:
-    {
-      i32 zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-      input.scroll = zDelta;
-    }break;
+	switch (msg)
+	{
+
+		case WM_MOUSEWHEEL:
+		{
+			i32 zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+			input.scroll = zDelta;
+		}break;
 		case WM_CREATE:
 		{
-			
+
 		}break;
-    case WM_DESTROY:
-    {
-      PostQuitMessage(0);
+		case WM_DESTROY:
+		{
+			PostQuitMessage(0);
 			win->closed = 1;
 		}break;
-    case WM_RBUTTONDOWN:
-    {
-      input.mb[MOUSE_BUTTON_RIGHT] = 1;
-    }break;
-    case WM_LBUTTONDOWN:
-    {
-      input.mb[MOUSE_BUTTON_LEFT] = 1;
-    }break;
-    case WM_RBUTTONUP:
+		case WM_RBUTTONDOWN:
 		{
-      input.mb[MOUSE_BUTTON_RIGHT] = 0;
-    }break;
-    case WM_LBUTTONUP:
-    {
-      input.mb[MOUSE_BUTTON_LEFT] = 0; 
-    }break;
-    case WM_MOUSEMOVE:
-    {
-      input.mpos.x = LOWORD(lParam);
-      input.mpos.y = HIWORD(lParam);
-			
-			//OS_Event *event = os_push_event();
-			//event->mpos.x = LOWORD(lParam);
-			//event->mpos.y = HIWORD(lParam);
-			//printf("%d %d %d\n", i++, input.mpos.x, input.mpos.y);
-			
+			input.mb[MOUSE_BUTTON_RIGHT] = 1;
 		}break;
-    case WM_KEYUP:
-    case WM_KEYDOWN:
-    {
+		case WM_LBUTTONDOWN:
+		{
+			input.mb[MOUSE_BUTTON_LEFT] = 1;
+		}break;
+		case WM_RBUTTONUP:
+		{
+			input.mb[MOUSE_BUTTON_RIGHT] = 0;
+		}break;
+		case WM_LBUTTONUP:
+		{
+			input.mb[MOUSE_BUTTON_LEFT] = 0; 
+		}break;
+		case WM_MOUSEMOVE:
+		{
+			input.mpos.x = LOWORD(lParam);
+			input.mpos.y = HIWORD(lParam);
+
+		//OS_Event *event = os_push_event();
+		//event->mpos.x = LOWORD(lParam);
+		//event->mpos.y = HIWORD(lParam);
+		//printf("%d %d %d\n", i++, input.mpos.x, input.mpos.y);
+
+		}break;
+		case WM_KEYUP:
+		case WM_KEYDOWN:
+		{
 			b32 pressed = msg == WM_KEYDOWN;
-			
-      local_persist i32 win32_sr_key_table[256];
+
+			local_persist i32 win32_sr_key_table[256];
 			local_persist b32 initialized;
-			
+
 			if(!initialized)
 			{
 				win32_sr_key_table[(u32)'W'] = KEY_UP;
@@ -191,27 +191,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				win32_sr_key_table[(u32)'S'] = KEY_DOWN;
 				win32_sr_key_table[(u32)'D'] = KEY_RIGHT;
 				win32_sr_key_table[VK_TAB] = KEY_TAB;
-        win32_sr_key_table[VK_CONTROL] = KEY_CTRL;
+				win32_sr_key_table[VK_CONTROL] = KEY_CTRL;
 				initialized = true;
-      }
-			
-      if(wParam >= 'A' && wParam <= 'Z')
-      {
-        input.keys[wParam] = pressed;
-      }
-      
-      if(wParam >= '0' && wParam <= '9')
-      {
-        input.keys[wParam] = pressed;
-      }
-      
+			}
+
+			if(wParam >= 'A' && wParam <= 'Z')
+			{
+				input.keys[wParam] = pressed;
+			}
+
+			if(wParam >= '0' && wParam <= '9')
+			{
+				input.keys[wParam] = pressed;
+			}
+
 			input.keys[win32_sr_key_table[wParam]] = pressed;
-			
+
 			if(wParam == 'Q')
 			{
 				win->closed = true;
 			}
-			
+
 			if(wParam == 'F' && pressed)
 			{
 				local_persist b32 is_fullscreen = 0;
@@ -219,7 +219,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					int w = GetSystemMetrics(SM_CXSCREEN);
 					int h = GetSystemMetrics(SM_CYSCREEN);
-					
+
 					SetWindowLongPtr(hwnd, GWL_STYLE, WS_VISIBLE | WS_POPUP);
 					SetWindowPos(hwnd, HWND_TOP, 0, 0, w, h, SWP_FRAMECHANGED);
 				}
@@ -227,140 +227,141 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					RECT borderRect = {};
 					AdjustWindowRectEx(&borderRect, WS_OVERLAPPEDWINDOW, 0, 0);
-					
+
 					win->w = 960;
 					win->h = 540;
-					
+
 					win->w += borderRect.right - borderRect.left;
 					win->h += borderRect.bottom - borderRect.top;
-					
+
 					SetWindowLongPtr(hwnd, GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
 					SetWindowPos(hwnd, HWND_TOP, 0, 0, win->w, win->h, SWP_FRAMECHANGED);
 				}
-				
+
 				is_fullscreen = !is_fullscreen;
 			}
-			
-    }break;
+
+		}break;
+
 		case WM_SIZE:
 		{
 			win->w = LOWORD(lParam);
 			win->h = HIWORD(lParam);
 		}break;
-		
-  }
+
+	}
   
-  return DefWindowProc(hwnd, msg, wParam, lParam);
+	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 W32_Window *os_win32_create_opengl_window(Arena *arena, const char *title, i32 w, i32 h)
 {
   
 	W32_Window *out = push_struct(arena, W32_Window);
-	
+
 	HGLRC rc = 0;
-	
+
 	WNDCLASSA wc = {};
-  
-  wc.style = CS_HREDRAW | CS_VREDRAW;
-  wc.lpfnWndProc = WndProc;
-  wc.hInstance = GetModuleHandle(0);
-  wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-  wc.lpszClassName = "main";
-  
-  RegisterClass(&wc);
-  
-  HWND fake_win = 0;
-  HDC fake_dc = 0;
-  HGLRC fake_rc = 0;
-  
-  {
-    fake_win = CreateWindowA(wc.lpszClassName, "fake_win", WS_OVERLAPPEDWINDOW, 100,100, 1, 1, 0, 0, wc.hInstance, 0);
-    
-    PIXELFORMATDESCRIPTOR pfd = {
-      .nSize = sizeof(PIXELFORMATDESCRIPTOR),
-      .nVersion = 1,
-      .dwFlags = PFD_DOUBLEBUFFER | 
-        PFD_SUPPORT_OPENGL | 
-        PFD_DRAW_TO_WINDOW,
-      .iPixelType = PFD_TYPE_RGBA,
-      .cColorBits = 32,
-      .cAlphaBits = 8,
-      .cDepthBits = 24,
-    };
-    
-    fake_dc = GetDC(fake_win);
-    
-    int px_fmt = ChoosePixelFormat(fake_dc, &pfd);
-    
-    SetPixelFormat(fake_dc, px_fmt, &pfd);
-    
-    fake_rc = wglCreateContext(fake_dc);
-    
-    wglMakeCurrent(fake_dc,fake_rc);
-    
-    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
-    
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-    
-  }
-  
-  {
+
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = WndProc;
+	wc.hInstance = GetModuleHandle(0);
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	wc.lpszClassName = "main";
+
+	RegisterClass(&wc);
+
+	HWND fake_win = 0;
+	HDC fake_dc = 0;
+	HGLRC fake_rc = 0;
+
+	{
+		fake_win = CreateWindowA(wc.lpszClassName, "fake_win", WS_OVERLAPPEDWINDOW, 100,100, 1, 1, 0, 0, wc.hInstance, 0);
+
+		PIXELFORMATDESCRIPTOR pfd = {
+		.nSize = sizeof(PIXELFORMATDESCRIPTOR),
+		.nVersion = 1,
+		.dwFlags = PFD_DOUBLEBUFFER | 
+		PFD_SUPPORT_OPENGL | 
+		PFD_DRAW_TO_WINDOW,
+		.iPixelType = PFD_TYPE_RGBA,
+		.cColorBits = 32,
+		.cAlphaBits = 8,
+		.cDepthBits = 24,
+		};
+
+		fake_dc = GetDC(fake_win);
+
+		int px_fmt = ChoosePixelFormat(fake_dc, &pfd);
+
+		SetPixelFormat(fake_dc, px_fmt, &pfd);
+
+		fake_rc = wglCreateContext(fake_dc);
+
+		wglMakeCurrent(fake_dc,fake_rc);
+
+		wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+
+		wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+
+	}
+
+	{
 		RECT borderRect = {};
 		AdjustWindowRectEx(&borderRect, WS_OVERLAPPEDWINDOW, 0, 0);
-		
+
 		out->w = w + borderRect.right - borderRect.left;
 		out->h = h + borderRect.bottom - borderRect.top;
-		
-    out->hwnd = CreateWindowA(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, 100,100, out->w, out->h, 0, 0, wc.hInstance, 0);
-    win = out;
-		
+
+		out->hwnd = CreateWindowA(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, 100,100, out->w, out->h, 0, 0, wc.hInstance, 0);
+		win = out;
+
 		ShowWindow(out->hwnd, SW_SHOWNORMAL);
-    UpdateWindow(out->hwnd);
-    
+		UpdateWindow(out->hwnd);
+
 		out->dc = GetDC(out->hwnd);
-    const int pixelAttribs[] = {
-      WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-      WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-      WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-      WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-      WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-      WGL_COLOR_BITS_ARB, 32,
-      WGL_ALPHA_BITS_ARB, 8,
-      WGL_DEPTH_BITS_ARB, 24,
-      WGL_STENCIL_BITS_ARB, 8,
-      WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
-      WGL_SAMPLES_ARB, 4,
-      0
-    };
-    
-    int pixelFormatID; UINT numFormats;
-    wglChoosePixelFormatARB(out->dc, pixelAttribs, NULL, 1, &pixelFormatID, &numFormats);
-    PIXELFORMATDESCRIPTOR PFD;
-    DescribePixelFormat(out->dc, pixelFormatID, sizeof(PFD), &PFD);
-    SetPixelFormat(out->dc, pixelFormatID, &PFD);
-    
-    wglMakeCurrent(0,0);
-    wglDeleteContext(fake_rc);
-    ReleaseDC(fake_win, fake_dc);
-    DestroyWindow(fake_win);
-    
-    out->dc = GetDC(out->hwnd);
-    
-    const int major_min = 4, minor_min = 5;
-    int  contextAttribs[] = {
-      WGL_CONTEXT_MAJOR_VERSION_ARB, major_min,
-      WGL_CONTEXT_MINOR_VERSION_ARB, minor_min,
-      WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-      0
-    };
-    
-    rc = wglCreateContextAttribsARB(out->dc, 0, contextAttribs);
-    wglMakeCurrent(out->dc,rc);
-  }
-	
+		const int pixelAttribs[] = {
+		WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+		WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+		WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+		WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+		WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+		WGL_COLOR_BITS_ARB, 32,
+		WGL_ALPHA_BITS_ARB, 8,
+		WGL_DEPTH_BITS_ARB, 24,
+		WGL_STENCIL_BITS_ARB, 8,
+		WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
+		WGL_SAMPLES_ARB, 4,
+		0
+		};
+
+		int pixelFormatID; UINT numFormats;
+		wglChoosePixelFormatARB(out->dc, pixelAttribs, NULL, 1, &pixelFormatID, &numFormats);
+		PIXELFORMATDESCRIPTOR PFD;
+		DescribePixelFormat(out->dc, pixelFormatID, sizeof(PFD), &PFD);
+		SetPixelFormat(out->dc, pixelFormatID, &PFD);
+
+		wglMakeCurrent(0,0);
+		wglDeleteContext(fake_rc);
+		ReleaseDC(fake_win, fake_dc);
+		DestroyWindow(fake_win);
+
+		out->dc = GetDC(out->hwnd);
+
+		const int major_min = 4, minor_min = 5;
+		int  contextAttribs[] = {
+		WGL_CONTEXT_MAJOR_VERSION_ARB, major_min,
+		WGL_CONTEXT_MINOR_VERSION_ARB, minor_min,
+		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		0
+		};
+
+		rc = wglCreateContextAttribsARB(out->dc, 0, contextAttribs);
+		wglMakeCurrent(out->dc,rc);
+	}
+
 	return out;
 }
 
@@ -416,12 +417,12 @@ int main(int argc, char **argv)
 		event_list.first = 0;
 		event_list.last = 0;
 		event_list.count = 0;
-		
+
 		while(PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
-    {
-      TranslateMessage(&msg);
-      DispatchMessageA(&msg);
-    }
+		{
+			TranslateMessage(&msg);
+			DispatchMessageA(&msg);
+		}
 		//printf("%d) %d %d\n", i++, input.mpos.x, input.mpos.y);
 		if(input.mpos_old.x != input.mpos.x && input.mpos_old.y != input.mpos.y)
 		{

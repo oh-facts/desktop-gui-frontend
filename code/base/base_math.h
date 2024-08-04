@@ -19,63 +19,63 @@
 
 union v2i
 {
-  i32 e[2];
-  struct
-  {
-    i32 x;
-    i32 y;
-  };
+	i32 e[2];
+	struct
+	{
+		i32 x;
+		i32 y;
+	};
 };
 
 union v2f
 {
-  f32 e[2];
-  struct
-  {
-    f32 x;
-    f32 y;
-  };
+	f32 e[2];
+	struct
+	{
+		f32 x;
+		f32 y;
+	};
 };
 
 union v3f
 {
-  f32 e[3];
-  struct
-  {
-    f32 x;
-    f32 y;
-    f32 z;
-  };
-  struct
-  {
-    v2f xy;
-    f32 _z;
-  };
+	f32 e[3];
+	struct
+	{
+		f32 x;
+		f32 y;
+		f32 z;
+	};
+	struct
+	{
+		v2f xy;
+		f32 _z;
+	};
 };
 
 union v4f
 {
-  f32 e[4];
-  struct
-  {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-  };
-	
-  union v3f xyz;
+	f32 e[4];
+	struct
+	{
+		f32 x;
+		f32 y;
+		f32 z;
+		f32 w;
+	};
+
+	union v3f xyz;
 };
 
 union m4f
 {
-  f32 e[4][4];
+	f32 e[4][4];
 };
 
 struct m4f_ortho_proj
 {
-  m4f fwd;
-  m4f inv;
+	m4f fwd;
+	m4f inv;
 };
 
 internal i32 floor_f32_to_i32(f32 a);

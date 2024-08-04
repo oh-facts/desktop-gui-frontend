@@ -4,12 +4,12 @@
 
 enum KEY
 {
-  KEY_UP = 1,
-  KEY_LEFT,
-  KEY_RIGHT,
-  KEY_DOWN,
-  KEY_TAB,
-  KEY_CTRL,
+	KEY_UP = 1,
+	KEY_LEFT,
+	KEY_RIGHT,
+	KEY_DOWN,
+	KEY_TAB,
+	KEY_CTRL,
 	KEY_COUNT = 128,
 };
 
@@ -23,24 +23,24 @@ enum MOUSE_BUTTON
 
 enum MOUSE_CURSOR
 {
-  MOUSE_CURSOR_ARROW,
-  MOUSE_CURSOR_HAND,
-  MOUSE_CURSOR_COUNT
+	MOUSE_CURSOR_ARROW,
+	MOUSE_CURSOR_HAND,
+	MOUSE_CURSOR_COUNT
 };
 
 struct Input
 {
-  b32 keys[KEY_COUNT];
-  b32 keys_old[KEY_COUNT];
-	
+	b32 keys[KEY_COUNT];
+	b32 keys_old[KEY_COUNT];
+
 	b32 mb[MOUSE_BUTTON_COUNT];
 	b32 mb_old[MOUSE_BUTTON_COUNT];
-	
+
 	v2i mpos;
-  v2i mpos_old;
-  b32 mmov;
-  
-  i32 scroll;
+	v2i mpos_old;
+	b32 mmov;
+
+	i32 scroll;
 };
 
 internal b32 input_is_key_tapped(Input *state, u32 key);

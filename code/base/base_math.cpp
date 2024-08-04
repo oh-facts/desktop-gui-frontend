@@ -1,217 +1,206 @@
 i32 floor_f32_to_i32(f32 a)
 {
-  i32 res = _mm_cvtss_si32(_mm_floor_ss(_mm_setzero_ps(), _mm_set_ss(a)));
-  return res;
+	i32 res = _mm_cvtss_si32(_mm_floor_ss(_mm_setzero_ps(), _mm_set_ss(a)));
+	return res;
 }
 
 f32 v2f_dist_sq(v2f a, v2f b)
 {
-  f32 out = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
-  return out;
+	f32 out = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+	return out;
 }
 
 b32 operator==(v2i a, v2i b)
 {
-  return a.x == b.x && a.y == b.y;
+	return a.x == b.x && a.y == b.y;
 }
 
 v2i operator-(v2i a, v2i b)
 {
-  return (v2i)
-  {
-    .x = a.x - b.x,
-    .y = a.y - b.y
-  };
+	return (v2i)
+	{
+		.x = a.x - b.x,
+		.y = a.y - b.y
+	};
 }
 
 v2i operator+(v2i a, v2i b)
 {
-  return (v2i)
-  {
-    .x = a.x + b.x,
-    .y = a.y + b.y
-  };
+	return (v2i)
+	{
+		.x = a.x + b.x,
+		.y = a.y + b.y
+	};
 }
 
 void operator+=(v2i &a, v2i b)
 {
-  a.x += b.x;
-  a.y += b.y;
+	a.x += b.x;
+	a.y += b.y;
 }
 
 void operator-=(v2i &a, v2i b)
 {
-  a.x -= b.x;
-  a.y -= b.y;
+	a.x -= b.x;
+	a.y -= b.y;
 }
 
 v2f operator+(v2f a, f32 b)
 {
-  return(v2f){
-    {
-      a.x + b,
-      a.y + b
-    }
-  };
+	return(v2f)
+	{
+		.x = a.x + b,
+		.y = a.y + b
+	};
 }
 
 v2f operator-(v2f a, f32 b)
 {
-  return(v2f){
-    {
-      a.x - b,
-      a.y - b
-    }
-  };
+	return(v2f)
+	{
+		.x = a.x - b,
+		.y = a.y - b
+	};
 }
 
 v2f operator*(v2f a, f32 b)
 {
-  return(v2f){
-    {
-      a.x * b,
-      a.y * b
-    }
-  };
+	return(v2f)
+	{
+		.x = a.x * b,
+		.y = a.y * b
+	};
 }
 
 v2f operator/(v2f a, f32 b)
 {
-  return(v2f){
-    {
-      a.x / b,
-      a.y / b
-    }
-  };
+	return(v2f)
+	{
+		.x = a.x / b,
+		.y = a.y / b
+	};
 }
 
 void operator+=(v2f& a, f32 b)
 {
-  a.x += b;
-  a.y += b;
+	a.x += b;
+	a.y += b;
 }
 
 void operator*=(v2f &a, f32 b)
 {
-  a.x *= b;
-  a.y *= b;
+	a.x *= b;
+	a.y *= b;
 }
 
 v2f operator+(v2f a, v2f b)
 {
-  return (v2f){
-    {
-      a.x + b.x,
-      a.y + b.y
-    }
-		
-  };
+	return (v2f)
+	{
+		.x = a.x + b.x,
+		.y = a.y + b.y
+	};
 }
 
 v2f operator-(v2f a, v2f b)
 {
-  return (v2f){
-    {
-      a.x - b.x,
-      a.y - b.y
-    }
-		
-  };
+	return (v2f)
+	{
+		.x = a.x - b.x,
+		.y = a.y - b.y
+	};
 }
 
 void operator+=(v2f &a, v2f b)
 {
-  a.x += b.x;
-  a.y += b.y;
+	a.x += b.x;
+	a.y += b.y;
 }
 
 void operator-=(v2f &a, v2f b)
 {
-  a.x -= b.x;
-  a.y -= b.y;
+	a.x -= b.x;
+	a.y -= b.y;
 }
 
 f32 v3f_len(v3f v)
 {
-  return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+	return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 v3f v3f_normalize(v3f v)
 {
-  f32 l = v3f_len(v);
-	
-  return v3f{
-    {
-      v.x/l,
-      v.y/l,
-      v.z/l
-    }};
+	f32 l = v3f_len(v);
+
+	return v3f
+	{
+		.x = v.x/l,
+		.y = v.y/l,
+		.z = v.z/l
+	};
 }
 
 f32 v3f_dot(v3f a, v3f b)
 {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
+	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 v3f v3f_cross(v3f a, v3f b)
 {
-  v3f result;
-  result.x = a.y * b.z - a.z * b.y;
-  result.y = a.z * b.x - a.x * b.z;
-  result.z = a.x * b.y - a.y * b.x;
-  return result;
+	v3f result;
+	result.x = a.y * b.z - a.z * b.y;
+	result.y = a.z * b.x - a.x * b.z;
+	result.z = a.x * b.y - a.y * b.x;
+	return result;
 }
 
 v3f operator*(v3f a, f32 b)
 {
-  return (v3f){
-    {
-      a.x * b,
-      a.y * b,
-      a.z * b
-    }
-		
-  };
+	return (v3f)
+	{
+		.x = a.x * b,
+		.y = a.y * b,
+		.z = a.z * b
+	};
 }
 
 v3f operator*(f32 a, v3f b)
 {
-  return b * a;
+	return b * a;
 }
 
 void operator+=(v3f &a, v3f b)
 {
-  a.x += b.x;
-  a.y += b.y;
-  a.z += b.z;
+	a.x += b.x;
+	a.y += b.y;
+	a.z += b.z;
 }
 
 void operator*=(v3f &a, f32 b)
 {
-  a.x *= b;
-  a.y *= b;
-  a.z *= b;
+	a.x *= b;
+	a.y *= b;
+	a.z *= b;
 }
 
 v3f operator+(v3f a, v3f b)
 {
-  return (v3f){
-    {
-      a.x + b.x,
-      a.y + b.y,
-      a.z + b.z
-    }
-		
-  };
+	return (v3f)
+	{
+		.x = a.x + b.x,
+		.y = a.y + b.y,
+		.z = a.z + b.z
+	};
 }
 
 v3f operator-(v3f a, v3f b)
 {
-  return v3f{{
-      a.x - b.x,
-      a.y - b.y,
-      a.z - b.z
-    }};
+  	return v3f
+	{
+		.x = a.x - b.x,
+		.y = a.y - b.y,
+		.z = a.z - b.z
+	};
 }
 
 b32 operator==(v3f a, v3f b)
@@ -228,18 +217,18 @@ b32 operator==(v3f a, v3f b)
 
 v4f operator*(m4f a, v4f b)
 {
-  v4f out = {};
-	
-  for(u32 r = 0; r < 4; r ++)
-  {
-    out.e[r] =
-      a.e[r][0] * b.e[0] +
-      a.e[r][1] * b.e[1] +
-      a.e[r][2] * b.e[2] +
-      a.e[r][3] * b.e[3];
-  }
-	
-  return out;
+	v4f out = {};
+
+	for(u32 r = 0; r < 4; r ++)
+	{
+		out.e[r] =
+		a.e[r][0] * b.e[0] +
+		a.e[r][1] * b.e[1] +
+		a.e[r][2] * b.e[2] +
+		a.e[r][3] * b.e[3];
+	}
+
+	return out;
 }
 
 m4f m4f_identity()
@@ -408,103 +397,102 @@ m4f_ortho_proj m4f_ortho(f32 left,f32 right,f32 bottom, f32 top, f32 _near, f32 
 
 m4f m4f_look_at(v3f eye, v3f center, v3f up)
 {
-  v3f z = v3f_normalize(center - eye);
-  v3f x = v3f_normalize(v3f_cross(z, up));
-  v3f y = v3f_cross(x, z);
-	
-  m4f mat = {
-    {
-      {x.x, y.x, -z.x, -v3f_dot(x,eye)},
-      {x.y, y.y, -z.y, -v3f_dot(y,eye)},
-      {x.z, y.z, -z.z, -v3f_dot(z,eye)},
-      {0,0,0, 1}
-    }
-  };
-	
-  return mat;
+	v3f z = v3f_normalize(center - eye);
+	v3f x = v3f_normalize(v3f_cross(z, up));
+	v3f y = v3f_cross(x, z);
+
+	m4f mat = {{
+		{x.x, y.x, -z.x, -v3f_dot(x,eye)},
+		{x.y, y.y, -z.y, -v3f_dot(y,eye)},
+		{x.z, y.z, -z.z, -v3f_dot(z,eye)},
+		{0,0,0, 1}
+	}};
+
+	return mat;
 }
 
 f32 determinant3x3(f32 a, f32 b, f32 c,
                    f32 d, f32 e, f32 f,
                    f32 g, f32 h, f32 i) {
-  return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+	return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
 }
 
-m4f adjugate(const m4f& mat) {
-  m4f adj;
-	
-  adj.e[0][0] =  determinant3x3(mat.e[1][1], mat.e[1][2], mat.e[1][3],
-                                mat.e[2][1], mat.e[2][2], mat.e[2][3],
-                                mat.e[3][1], mat.e[3][2], mat.e[3][3]);
-  adj.e[1][0] = -determinant3x3(mat.e[1][0], mat.e[1][2], mat.e[1][3],
-                                mat.e[2][0], mat.e[2][2], mat.e[2][3],
-                                mat.e[3][0], mat.e[3][2], mat.e[3][3]);
-  adj.e[2][0] =  determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][3],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][3],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][3]);
-  adj.e[3][0] = -determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][2],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][2],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][2]);
-	
-  adj.e[0][1] = -determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
-                                mat.e[2][1], mat.e[2][2], mat.e[2][3],
-                                mat.e[3][1], mat.e[3][2], mat.e[3][3]);
-  adj.e[1][1] =  determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
-                                mat.e[2][0], mat.e[2][2], mat.e[2][3],
-                                mat.e[3][0], mat.e[3][2], mat.e[3][3]);
-  adj.e[2][1] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][3],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][3]);
-  adj.e[3][1] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][2],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][2]);
-	
-  adj.e[0][2] =  determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
-                                mat.e[1][1], mat.e[1][2], mat.e[1][3],
-                                mat.e[3][1], mat.e[3][2], mat.e[3][3]);
-  adj.e[1][2] = -determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
-                                mat.e[1][0], mat.e[1][2], mat.e[1][3],
-                                mat.e[3][0], mat.e[3][2], mat.e[3][3]);
-  adj.e[2][2] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
-                                mat.e[1][0], mat.e[1][1], mat.e[1][3],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][3]);
-  adj.e[3][2] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
-                                mat.e[1][0], mat.e[1][1], mat.e[1][2],
-                                mat.e[3][0], mat.e[3][1], mat.e[3][2]);
-	
-  adj.e[0][3] = -determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
-                                mat.e[1][1], mat.e[1][2], mat.e[1][3],
-                                mat.e[2][1], mat.e[2][2], mat.e[2][3]);
-  adj.e[1][3] =  determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
-                                mat.e[1][0], mat.e[1][2], mat.e[1][3],
-                                mat.e[2][0], mat.e[2][2], mat.e[2][3]);
-  adj.e[2][3] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
-                                mat.e[1][0], mat.e[1][1], mat.e[1][3],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][3]);
-  adj.e[3][3] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
-                                mat.e[1][0], mat.e[1][1], mat.e[1][2],
-                                mat.e[2][0], mat.e[2][1], mat.e[2][2]);
-	
-  return adj;
+m4f adjugate(const m4f& mat) 
+{
+	m4f adj;
+		
+	adj.e[0][0] =  determinant3x3(mat.e[1][1], mat.e[1][2], mat.e[1][3],
+									mat.e[2][1], mat.e[2][2], mat.e[2][3],
+									mat.e[3][1], mat.e[3][2], mat.e[3][3]);
+	adj.e[1][0] = -determinant3x3(mat.e[1][0], mat.e[1][2], mat.e[1][3],
+									mat.e[2][0], mat.e[2][2], mat.e[2][3],
+									mat.e[3][0], mat.e[3][2], mat.e[3][3]);
+	adj.e[2][0] =  determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][3],
+									mat.e[2][0], mat.e[2][1], mat.e[2][3],
+									mat.e[3][0], mat.e[3][1], mat.e[3][3]);
+	adj.e[3][0] = -determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][2],
+									mat.e[2][0], mat.e[2][1], mat.e[2][2],
+									mat.e[3][0], mat.e[3][1], mat.e[3][2]);
+		
+	adj.e[0][1] = -determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
+									mat.e[2][1], mat.e[2][2], mat.e[2][3],
+									mat.e[3][1], mat.e[3][2], mat.e[3][3]);
+	adj.e[1][1] =  determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
+									mat.e[2][0], mat.e[2][2], mat.e[2][3],
+									mat.e[3][0], mat.e[3][2], mat.e[3][3]);
+	adj.e[2][1] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
+									mat.e[2][0], mat.e[2][1], mat.e[2][3],
+									mat.e[3][0], mat.e[3][1], mat.e[3][3]);
+	adj.e[3][1] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
+									mat.e[2][0], mat.e[2][1], mat.e[2][2],
+									mat.e[3][0], mat.e[3][1], mat.e[3][2]);
+		
+	adj.e[0][2] =  determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
+									mat.e[1][1], mat.e[1][2], mat.e[1][3],
+									mat.e[3][1], mat.e[3][2], mat.e[3][3]);
+	adj.e[1][2] = -determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
+									mat.e[1][0], mat.e[1][2], mat.e[1][3],
+									mat.e[3][0], mat.e[3][2], mat.e[3][3]);
+	adj.e[2][2] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
+									mat.e[1][0], mat.e[1][1], mat.e[1][3],
+									mat.e[3][0], mat.e[3][1], mat.e[3][3]);
+	adj.e[3][2] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
+									mat.e[1][0], mat.e[1][1], mat.e[1][2],
+									mat.e[3][0], mat.e[3][1], mat.e[3][2]);
+		
+	adj.e[0][3] = -determinant3x3(mat.e[0][1], mat.e[0][2], mat.e[0][3],
+									mat.e[1][1], mat.e[1][2], mat.e[1][3],
+									mat.e[2][1], mat.e[2][2], mat.e[2][3]);
+	adj.e[1][3] =  determinant3x3(mat.e[0][0], mat.e[0][2], mat.e[0][3],
+									mat.e[1][0], mat.e[1][2], mat.e[1][3],
+									mat.e[2][0], mat.e[2][2], mat.e[2][3]);
+	adj.e[2][3] = -determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][3],
+									mat.e[1][0], mat.e[1][1], mat.e[1][3],
+									mat.e[2][0], mat.e[2][1], mat.e[2][3]);
+	adj.e[3][3] =  determinant3x3(mat.e[0][0], mat.e[0][1], mat.e[0][2],
+									mat.e[1][0], mat.e[1][1], mat.e[1][2],
+									mat.e[2][0], mat.e[2][1], mat.e[2][2]);
+		
+	return adj;
 }
 
-f32 determinant(const m4f& mat) {
-  f32 det = 0;
-	
-  det += mat.e[0][0] * determinant3x3(mat.e[1][1], mat.e[1][2], mat.e[1][3],
-                                      mat.e[2][1], mat.e[2][2], mat.e[2][3],
-                                      mat.e[3][1], mat.e[3][2], mat.e[3][3]);
-  det -= mat.e[0][1] * determinant3x3(mat.e[1][0], mat.e[1][2], mat.e[1][3],
-                                      mat.e[2][0], mat.e[2][2], mat.e[2][3],
-                                      mat.e[3][0], mat.e[3][2], mat.e[3][3]);
-  det += mat.e[0][2] * determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][3],
-                                      mat.e[2][0], mat.e[2][1], mat.e[2][3],
-                                      mat.e[3][0], mat.e[3][1], mat.e[3][3]);
-  det -= mat.e[0][3] * determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][2],
-                                      mat.e[2][0], mat.e[2][1], mat.e[2][2],
-                                      mat.e[3][0], mat.e[3][1], mat.e[3][2]);
-	
-  return det;
+	f32 determinant(const m4f& mat) {
+	f32 det = 0;
+
+	det += mat.e[0][0] * determinant3x3(mat.e[1][1], mat.e[1][2], mat.e[1][3],
+										mat.e[2][1], mat.e[2][2], mat.e[2][3],
+										mat.e[3][1], mat.e[3][2], mat.e[3][3]);
+	det -= mat.e[0][1] * determinant3x3(mat.e[1][0], mat.e[1][2], mat.e[1][3],
+										mat.e[2][0], mat.e[2][2], mat.e[2][3],
+										mat.e[3][0], mat.e[3][2], mat.e[3][3]);
+	det += mat.e[0][2] * determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][3],
+										mat.e[2][0], mat.e[2][1], mat.e[2][3],
+										mat.e[3][0], mat.e[3][1], mat.e[3][3]);
+	det -= mat.e[0][3] * determinant3x3(mat.e[1][0], mat.e[1][1], mat.e[1][2],
+										mat.e[2][0], mat.e[2][1], mat.e[2][2],
+										mat.e[3][0], mat.e[3][1], mat.e[3][2]);
+
+	return det;
 }
 
 m4f inverse(const m4f& mat) {
