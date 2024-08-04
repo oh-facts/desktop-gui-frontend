@@ -18,19 +18,12 @@ struct D_Proj_view_node
 	m4f v;
 };
 
-struct R_Font
-{
-	R_Handle tex;
-	v2i bearing;
-	i32 x0, y0, x1, y1;
-	i32 advance;
-};
-
 struct D_Text_params
 {
 	v4f color;
 	f32 scale;
-	R_Font *font;
+	Atlas *atlas;
+	R_Handle *atlas_tex;
 };
 
 struct D_Bucket
@@ -111,7 +104,7 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 	{
 		char c = text.c[i];
 		
-		R_Font *ch = p->font + (u32)c;
+		Glyph *ch = glyph_from_codepoint(p->atlas, c);
 		f32 xpos = text_pos.x + ch->bearing.x * p->scale;
 		f32 ypos = text_pos.y + ch->bearing.y * p->scale;
 		f32 w = (ch->x1 - ch->x0) * p->scale;
@@ -144,7 +137,8 @@ internal void d_draw_text(D_Bucket *bucket, Str8 text, v2f pos, D_Text_params *p
 		//printf("%f\n", h);
 		rect->br.x = rect->tl.x + w;
 		rect->br.y = rect->tl.y - h;
-		rect->tex = ch->tex;
+		
+		rect->tex = p->atlas_tex[(u32)c];
 		rect->color = p->color;
 		pass->rect_pass.proj_view = bucket->proj_view_top->v;
 		
@@ -190,7 +184,8 @@ internal void d_draw_ui(D_Bucket *draw, UI_Widget *root)
 		{
 			color,
 			draw->default_text_params.scale,
-			draw->default_text_params.font
+			draw->default_text_params.atlas,
+			draw->default_text_params.atlas_tex,
 		};
 		
 		d_draw_text(draw, root->text, root->pos, &params);

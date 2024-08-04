@@ -28,7 +28,7 @@ internal void ui_end(UI_Context *cxt)
 				if(cur->last_frame_touched_index != cxt->frames)
 				{
 					//printf("pruned %.*s\n", str8_varg(cur->text));
-				
+					
 					if(prev)
 					{
 						prev->hash_next = cur->hash_next;
@@ -45,7 +45,7 @@ internal void ui_end(UI_Context *cxt)
 							(cxt->hash_slots + i)->last = 0;
 						}
 					}
-
+					
 					UI_Widget *to_free = cur;
 					cur = cur->hash_next;
 					ui_free_widget(cxt, to_free);
@@ -61,7 +61,7 @@ internal void ui_end(UI_Context *cxt)
 	//printf("\n");
 }
 
-internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font, WindowKind kind)
+internal void create_window(Window *win, Str8 title, f32 x, f32 y, Atlas *atlas, WindowKind kind)
 {
 	win->cxt = ui_alloc_cxt();
 	win->title = title;
@@ -72,7 +72,7 @@ internal void create_window(Window *win, Str8 title, f32 x, f32 y, Glyph *font, 
 	ui_push_pref_height(win->cxt, 0);
 	ui_push_fixed_pos(win->cxt, v2f{{0,0}});
 	ui_push_size_kind(win->cxt, UI_SizeKind_Null);
-	win->cxt->atlas = font;
+	win->cxt->atlas = atlas;
 	win->pos.x = x;
 	win->pos.y = y;
 	win->cxt->frames = 0;
@@ -132,8 +132,8 @@ internal void update_window(S_Platform *pf, Input *input, Window *win, D_Bucket 
 				
 				Arena_temp temp_arena = scratch_begin(0,0);
 				Str8 hide_str = push_str8f(temp_arena.arena, "hide");
-				f32 title_width = ui_text_spacing_stats(cxt->atlas, win->title, 0.00007).br.x;
-				title_width += ui_text_spacing_stats(cxt->atlas, hide_str, 0.00007).br.x;
+				f32 title_width = ui_text_spacing_stats(cxt->atlas->glyphs, win->title, 0.00007).br.x;
+				title_width += ui_text_spacing_stats(cxt->atlas->glyphs, hide_str, 0.00007).br.x;
 				scratch_end(&temp_arena);
 				
 				ui_push_size_kind_x(cxt, UI_SizeKind_Pixels);
@@ -282,23 +282,15 @@ void update_and_render(S_Platform * pf, Input *input)
 			
 			if(c != '\n' && c != ' ')
 			{
-				state->font[c].tex = r_alloc_texture(temp_font[i].bmp, temp_font[i].w, temp_font[i].h, 1, &font_params);
+				state->atlas_tex[c] = r_alloc_texture(temp_font[i].bmp, temp_font[i].w, temp_font[i].h, 1, &font_params);
 			}
 			
-			state->font[c].bearing = temp_font[i].bearing;
-			state->font[c].advance = temp_font[i].advance;
-			state->font[c].x0 = temp_font[i].x0;
-			state->font[c].x1 = temp_font[i].x1;
-			state->font[c].y0 = temp_font[i].y0;
-			state->font[c].y1 = temp_font[i].y1;
-			
-			state->atlas[c].bearing = temp_font[i].bearing;
-			state->atlas[c].advance = temp_font[i].advance;
-			state->atlas[c].x0 = temp_font[i].x0;
-			state->atlas[c].x1 = temp_font[i].x1;
-			state->atlas[c].y0 = temp_font[i].y0;
-			state->atlas[c].y1 = temp_font[i].y1;
-			
+			state->atlas.glyphs[c].bearing = temp_font[i].bearing;
+			state->atlas.glyphs[c].advance = temp_font[i].advance;
+			state->atlas.glyphs[c].x0 = temp_font[i].x0;
+			state->atlas.glyphs[c].x1 = temp_font[i].x1;
+			state->atlas.glyphs[c].y0 = temp_font[i].y0;
+			state->atlas.glyphs[c].y1 = temp_font[i].y1;
 			
 		}
 		
@@ -311,9 +303,9 @@ void update_and_render(S_Platform * pf, Input *input)
 		
 		arena_temp_end(&temp);
 		
-		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, state->atlas, WindowKind_Null);
-		create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f, state->atlas, WindowKind_Null);
-		create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f, state->atlas, WindowKind_Profiler);
+		create_window(&state->win[0], str8_lit("Entity list"), -0.8, 0.8, &state->atlas, WindowKind_Null);
+		create_window(&state->win[1], str8_lit("Spritesheet"), -0.5f, -0.3f, &state->atlas, WindowKind_Null);
+		create_window(&state->win[2], str8_lit("Info Panel"),  .7f, -0.3f, &state->atlas, WindowKind_Profiler);
 	}
 	
 	State *state = (State*)pf->memory;
@@ -330,7 +322,8 @@ void update_and_render(S_Platform * pf, Input *input)
 	(D_Text_params){
 		(v4f){{1,1,1,1}},
 		0.00007,
-		state->font
+		&state->atlas,
+		state->atlas_tex
 	};
 	
 	f32 zoom = 1;

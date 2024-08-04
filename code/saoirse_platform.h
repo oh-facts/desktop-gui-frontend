@@ -46,6 +46,17 @@ struct Glyph
 	i32 advance;
 };
 
+struct Atlas
+{
+	Glyph glyphs[256];
+};
+
+internal Glyph *glyph_from_codepoint(Atlas *atlas, char c)
+{
+	Glyph *out = atlas->glyphs + (u32)c;
+	return out;
+}
+
 #include "ui.h"
 #include "render.h"
 #include "draw.h"
@@ -188,51 +199,51 @@ enum FILE_TYPE
 internal u8 *read_file(Arena *arena, const char *filepath, FILE_TYPE type)
 {
 	FILE *file;
-
+	
 	local_persist char *file_type_table[FILE_TYPE_COUNT] = 
 	{
 		"r",
 		"rb"
 	};
-	#if 0
+#if 0
 	if (access(filepath, F_OK) != 0)
 	{
 		file = fopen(filepath, "wb+");
-
+		
 		fclose(file);
 	}
-	#endif
+#endif
 	_file_open(&file, filepath, file_type_table[type]);
-
+	
 	fseek(file, 0, SEEK_END);
-
+	
 	i32 len = ftell(file);
 	//print("%d", len);
-
+	
 	fseek(file, 0, SEEK_SET);
-
+	
 	u8 *buffer = push_array(arena, u8, len);
 	fread(buffer, sizeof(u8), len, file);
-
+	
 	fclose(file);
-
+	
 	return buffer;
 }
 
 internal void write_file(const char *filepath, FILE_TYPE type, void *data, size_t size)
 {
 	FILE *file;
-
+	
 	local_persist char *file_type_table[FILE_TYPE_COUNT] = 
 	{
 		"w",
 		"wb"
 	};
-
+	
 	_file_open(&file, filepath, file_type_table[type]);
-
+	
 	fwrite(data, size, 1, file);
-
+	
 	fclose(file);
 }
 
@@ -256,12 +267,12 @@ internal Bitmap bitmap(Str8 path)
 internal Glyph *make_bmp_font(u8* path, char *codepoints, u32 num_cp, Arena* arena)
 {
 	u8 *file_data = read_file(arena, (char*)path, FILE_TYPE_BINARY);
-
+	
 	stbtt_fontinfo font;
 	stbtt_InitFont(&font, (u8*)file_data, stbtt_GetFontOffsetForIndex((u8*)file_data,0));
-
+	
 	Glyph *out = push_array(arena, Glyph, num_cp);
-
+	
 	for(u32 i = 0; i < num_cp; i++)
 	{
 		i32 w,h,xoff,yoff;
