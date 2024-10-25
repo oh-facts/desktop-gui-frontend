@@ -764,6 +764,67 @@ internal void ui_layout(UI_Widget *root)
 	//printf("\n");
 }
 
+internal void ui_begin(UI_Context *cxt)
+{
+	UI_Widget *root = ui_make_widget(cxt, str8_lit("rootere"));
+	ui_push_parent(cxt, root);
+	cxt->root = root;
+	cxt->str_arena->used = ARENA_HEADER_SIZE;
+}
+
+internal void ui_end(UI_Context *cxt)
+{
+	ui_pop_parent(cxt);
+	
+	for(i32 i = 0; i < cxt->hash_table_size; i++)
+	{
+		UI_Widget *first_hash = (cxt->hash_slots + i)->first;
+		if(!first_hash)
+		{
+			continue;
+		}
+		if(first_hash)
+		{
+			UI_Widget *cur = first_hash;
+			UI_Widget *prev = 0;
+			while(cur)
+			{
+				if(cur->last_frame_touched_index != cxt->frames)
+				{
+					//printf("pruned %.*s\n", str8_varg(cur->text));
+					
+					if(prev)
+					{
+						prev->hash_next = cur->hash_next;
+						if (!cur->hash_next)
+						{
+							(cxt->hash_slots + i)->last = prev;
+						}
+					}
+					else
+					{
+						(cxt->hash_slots + i)->first = cur->hash_next;
+						if (!cur->hash_next)
+						{
+							(cxt->hash_slots + i)->last = 0;
+						}
+					}
+					
+					UI_Widget *to_free = cur;
+					cur = cur->hash_next;
+					ui_free_widget(cxt, to_free);
+				}
+				else
+				{
+					prev = cur;
+					cur = cur->hash_next;
+				}
+			}
+		}
+	}
+	//printf("\n");
+}
+
 /*
 // calculate sizes
 	UI_Widget *stack[1024];
